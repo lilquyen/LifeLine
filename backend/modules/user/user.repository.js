@@ -2,7 +2,7 @@ const db = require('../../config/db');
 
 const createUser = async (user) => {
     const query = `
-        INSERT INTO users (username, password, phone,. full_name, role, avatar_url, is_active)
+        INSERT INTO users (username, password, phone, full_name, role, avatar_url, is_active)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *;
     `;
@@ -17,8 +17,8 @@ const createUser = async (user) => {
         user.is_active || true
     ];
 
-    const results = await db.query(query, Values);
-    return results.rows[0];
+    const result = await db.query(query, Values);
+    return result.rows[0];
 };
 
 const findByUsername = async (username) => {

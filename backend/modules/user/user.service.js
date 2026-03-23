@@ -26,16 +26,17 @@ const register = async (data) => {
     return newUser;
 }
 
-const login = async (username, password) => {
+const login = async (data) => {
     // tim kiem user
-    const user = await repo.findByUsername(username);
-
+    console.log('data:', data);
+    const user = await repo.findByUsername(data.username);
+    console.log('cde');
     if(!user) {
         throw new Error('Invalid username or password');
     }
 
     // kiem tra password
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(data.password, user.password);
     if(!isMatch) {
         throw new Error('Invalid username or password');
     }
