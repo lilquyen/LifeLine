@@ -28,9 +28,8 @@ const register = async (data) => {
 
 const login = async (data) => {
     // tim kiem user
-    console.log('data:', data);
     const user = await repo.findByUsername(data.username);
-    console.log('cde');
+    
     if(!user) {
         throw new Error('Invalid username or password');
     }
