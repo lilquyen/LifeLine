@@ -48,7 +48,7 @@ const findById = async (id) => {
     return result.rows[0];      
 }
 
-const updatLocation = async (userId, lat, lng) => {
+const updateLocation = async (userId, lat, lng) => {
     const query = `
         UPDATE users
         SET current_location = ST_SetSRID(ST_MakePoint($1, $2), 4326)
@@ -62,10 +62,41 @@ const updatLocation = async (userId, lat, lng) => {
     return result.rows[0]
 }
 
+const getCurrentLocation = async (userId) => {
+    const query = `
+        SELECT 
+            ST_Y(current_location) AS lat,
+            ST_X(current_location) AS lng
+        FROM users
+        WHERE id = $1
+    `;
+
+    const result = await db.query(query, [userId]);
+    return result.rows[0];
+}
+
+const getUserByRequestId = async (requestId) => {
+    const query = `
+        SELECT 
+            u.id,
+            u.username,
+            u.full_name,
+            u.phone,
+            u.avatar_url
+        FROM users u
+        JOIN rescue_requests r ON u.id = r.user_id
+        WHERE r.id = $1
+    `;
+
+    const result = await db.query(query, [requestId]);
+    return result.rows[0];
+}
+
 module.exports = {
     createUser,
     findByUsername,
     findByPhone,
     findById,
-    updatLocation
+    updateLocation,
+    getCurrentLocation
 }
