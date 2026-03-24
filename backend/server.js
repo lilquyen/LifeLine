@@ -1,5 +1,11 @@
 const app = require('./app');
+const http = require('http');
+const socketLib = require('./common/socket');
+const server = http.createServer(app);
 
-app.listen(process.env.PORT, () => {
-  console.log('Server running...');
+socketLib.init(server);
+
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+    console.log(`Server đang chạy tại: http://localhost:${PORT}`);
 });
