@@ -1,17 +1,14 @@
 const express = require('express');
 const router = express.Router();
 
-const controller = require('./rescuePost.controller');
+const controller = require('./rescueAssignment.controller');
 const auth = require('../../common/middleware/auth.middleware');
 const role = require('../../common/middleware/role.middleware');
 
-router.post('/post', 
+router.post('/assign/:postId', 
     auth, 
-    role(['victim']),
-    controller.createPost
+    role(['rescuer']),
+    controller.acceptRescue
 );
-
-router.get('/', controller.getAllPosts);
-router.get('/:id', controller.getPostById);
 
 module.exports = router;

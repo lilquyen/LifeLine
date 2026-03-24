@@ -22,7 +22,7 @@ const getAllPosts = async (req, res) => {
     try {
         const posts = await service.getAllPosts();
 
-        res.json(post);
+        res.json(posts);
     } catch (err) {
         console.log(err);
 
