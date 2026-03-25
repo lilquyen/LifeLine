@@ -1,5 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const notificationRoutes = require('../modules/notification/notification.routes');
+
+router.use('/notifications', notificationRoutes);
 
 router.use('/auth', require('../modules/user/user.routes'));
 
