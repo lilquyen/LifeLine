@@ -32,9 +32,9 @@ export default function LoginPage() {
         login(res.data.user, res.data.token);
         toast.success('Đăng nhập thành công!');
 
-        if (res.data.user.role === 'victim')  navigate('/victim/dashboard');
-        if (res.data.user.role === 'rescuer') navigate('/rescuer/dashboard');
-        if (res.data.user.role === 'admin')   navigate('/admin/dashboard');
+        if (res.data.user.role === 'victim')  navigate('/victim/');
+        if (res.data.user.role === 'rescuer') navigate('/rescuer/');
+        if (res.data.user.role === 'admin')   navigate('/admin/');
       } else {
         await api.post('/auth/register', form);
         toast.success('Đăng ký thành công! Vui lòng đăng nhập.');

@@ -17,7 +17,7 @@ function App() {
             <VictimLayout />
           </ProtectedRoute>
         }>
-          <Route path="create-request" element={<CreateRequest />} />
+          <Route path="create-request" element={<CreateRequest/>} />
         </Route>
       </Routes>
     </BrowserRouter>
