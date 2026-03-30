@@ -1,29 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-// Import các components từ thư mục dùng chung
+// 1. Import Types
+import { AlertItem } from '../../types'; 
+
+// 2. Import Mock Data (Đã ẩn)
+// import { mockAssets, mockPersonnel, mockRiskData, mockIncidentTrends } from '../../lib/mockData';
+
+// 3. Import UI Components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { GoogleMapsComponent } from '../../components/GoogleMapsComponent';
+import { GoogleMapsComponent } from '../../components/LeafletComponent'; // Bản chất là Leaflet
 import { AssetDashboard } from '../../components/AssetDashboard';
 import { AlertSystem } from '../../components/AlertSystem';
 import { PersonnelManagement } from '../../components/PersonnelManagement';
 import { RiskAnalysis } from '../../components/RiskAnalysis';
 
-// --- Định nghĩa kiểu dữ liệu để tránh lỗi TypeScript ---
-interface Alert {
-  id: string;
-  level: 1 | 2 | 3 | 4 | 5;
-  title: string;
-  description: string;
-  location: string;
-  timestamp: string;
-  status: 'new' | 'acknowledged' | 'resolved';
-}
-
-interface Incident {
+// Định nghĩa Interface khớp với LeafletComponent
+export interface IncidentMapItem {
   id: string;
   type: string;
   level: 1 | 2 | 3 | 4 | 5;
@@ -34,54 +30,43 @@ interface Incident {
   status: 'active' | 'escalated' | 'resolved';
 }
 
-// Giữ lại Mock Data cho các phần chưa có API (Personnel, Assets, Risk)
-const mockAssets = [
-  { id: '1', name: 'Trạm Cứu hỏa 1', type: 'fire_truck' as const, status: 'ready' as const, lat: 21.0285, lng: 105.8542 },
-  { id: '2', name: 'Xe Cấp cứu A', type: 'ambulance' as const, status: 'deployed' as const, lat: 21.0245, lng: 105.8422 },
-];
-
-const mockPersonnel = [
-  { id: '1', name: 'Nguyễn Văn A', role: 'Đội trưởng', status: 'available' as const, location: 'Hà Nội', specialization: ['Cứu hộ'], contact: '0912345678', lastActive: '5 phút trước' },
-];
-
 export default function RescuerDashboard() {
-  // --- States ---
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [incidents, setIncidents] = useState<IncidentMapItem[]>([]);
+  
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const [selectedIncident, setSelectedIncident] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // --- Gọi API lấy dữ liệu thật từ Backend ---
+  // Gọi API lấy dữ liệu từ Backend
   useEffect(() => {
     const fetchRescueData = async () => {
       try {
-        // Thay cổng 5000 bằng cổng Backend của bạn nếu khác
         const response = await axios.get('http://localhost:5000/api/rescue-posts');
         const dbData = response.data;
 
         if (Array.isArray(dbData)) {
-          // 1. Map dữ liệu cho danh sách Alert
-          const mappedAlerts: Alert[] = dbData.map((post: any) => ({
-            id: post._id,
-            level: post.urgency_level === 'High' ? 4 : (post.urgency_level === 'Medium' ? 3 : 2),
+          // 1. Mapped cho danh sách Cảnh báo (AlertSystem)
+          const mappedAlerts: AlertItem[] = dbData.map((post: any) => ({
+            id: post.id, // Đổi từ _id thành id
+            level: Number(post.urgency_level) as 1 | 2 | 3 | 4 | 5 || 2,
             title: post.title || 'Yêu cầu cứu hộ',
-            description: post.content || 'Không có mô tả',
+            description: post.description || 'Không có mô tả',
             location: post.address || 'Chưa xác định',
-            timestamp: new Date(post.createdAt).toLocaleString('vi-VN'),
-            status: post.status === 'Open' ? 'new' : (post.status === 'In Progress' ? 'acknowledged' : 'resolved')
+            timestamp: new Date(post.created_at).toLocaleString('vi-VN'), // Đổi sang created_at
+            status: post.status === 'pending' ? 'new' : (post.status === 'assigned' ? 'acknowledged' : 'resolved')
           }));
 
-          // 2. Map dữ liệu cho các điểm trên Bản đồ
-          const mappedIncidents: Incident[] = dbData.map((post: any) => ({
-            id: post._id,
+          // 2. Mapped cho điểm trên Bản đồ (Leaflet)
+          const mappedIncidents: IncidentMapItem[] = dbData.map((post: any) => ({
+            id: post.id,
             type: post.title || 'Sự cố',
-            level: post.urgency_level === 'High' ? 4 : 2,
+            level: Number(post.urgency_level) as 1 | 2 | 3 | 4 | 5 || 2,
             location: post.address || 'Chưa xác định',
-            lat: Number(post.latitude) || 21.0285,
-            lng: Number(post.longitude) || 105.8542,
-            timestamp: new Date(post.createdAt).toLocaleString('vi-VN'),
-            status: post.status === 'Open' ? 'active' : 'resolved'
+            lat: Number(post.lat) || 10.7769, // Lấy từ ST_Y
+            lng: Number(post.lng) || 106.7009, // Lấy từ ST_X
+            timestamp: new Date(post.created_at).toLocaleString('vi-VN'),
+            status: post.status === 'pending' ? 'active' : 'resolved' // Map status
           }));
 
           setAlerts(mappedAlerts);
@@ -97,33 +82,62 @@ export default function RescuerDashboard() {
     fetchRescueData();
   }, []);
 
-  // --- Handlers ---
-  const handleAcknowledgeAlert = (alertId: string) => {
-    setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'acknowledged' } : a));
+  // --- Handlers xử lý API ---
+  const handleAcknowledgeAlert = async (alertId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:5000/api/assignments/assign/${alertId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'acknowledged' } : a));
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Lỗi tiếp nhận!");
+    }
   };
 
-  const handleResolveAlert = (alertId: string) => {
-    setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'resolved' } : a));
+  const handleResolveAlert = async (alertId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:5000/api/assignments/complete/${alertId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'resolved' } : a));
+      alert("Xác nhận hoàn thành ca cứu hộ!");
+    } catch (error: any) {
+      alert("Lỗi: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleFailAlert = async (alertId: string) => {
+    if (!window.confirm("Giải phóng ca cứu hộ này?")) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:5000/api/assignments/fail/${alertId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'new' } : a));
+    } catch (error: any) {
+      alert("Lỗi khi hủy: " + error.message);
+    }
   };
 
   const activeAlerts = alerts.filter(a => a.status !== 'resolved');
   const criticalCount = activeAlerts.filter(a => a.level >= 4).length;
 
-  if (loading) return <div className="p-10 text-center">Đang tải dữ liệu cứu hộ...</div>;
+  if (loading) return <div className="p-10 text-center font-bold">Đang tải dữ liệu...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col w-full">
-      {/* Header */}
       <header className="bg-white border-b p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Trung tâm Chỉ huy LineLife</h1>
-            <p className="text-sm text-gray-600">Hệ thống điều phối khẩn cấp thời gian thực</p>
+            <h1 className="text-2xl font-bold">Trung tâm Chỉ huy LineLife</h1>
+            <p className="text-sm text-gray-500 italic">Dữ liệu thực tế từ PostgreSQL</p>
           </div>
           <div className="flex items-center gap-4">
-            <Badge variant="outline" className="text-green-700">🟢 Hệ thống Online</Badge>
+            <Badge variant="outline" className="text-green-700 font-mono">Cổng 5000 Connected</Badge>
             <Badge variant="destructive" className={activeAlerts.length > 0 ? "animate-pulse" : ""}>
-              {activeAlerts.length} SOS mới
+              {activeAlerts.length} SOS CHƯA XỬ LÝ
             </Badge>
           </div>
         </div>
@@ -133,8 +147,8 @@ export default function RescuerDashboard() {
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-            <TabsTrigger value="map">Bản đồ</TabsTrigger>
-            <TabsTrigger value="alerts">Cảnh báo</TabsTrigger>
+            <TabsTrigger value="map">Bản đồ thực tế</TabsTrigger>
+            <TabsTrigger value="alerts">Danh sách SOS</TabsTrigger>
             <TabsTrigger value="personnel">Nhân sự</TabsTrigger>
             <TabsTrigger value="assets">Thiết bị</TabsTrigger>
             <TabsTrigger value="analysis">Phân tích</TabsTrigger>
@@ -143,21 +157,27 @@ export default function RescuerDashboard() {
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card>
-                <CardHeader><CardTitle>Thống kê nhanh</CardTitle></CardHeader>
+                <CardHeader><CardTitle>Trạng thái</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex justify-between"><span>Sự cố đang mở:</span> <Badge variant="destructive">{activeAlerts.length}</Badge></div>
-                  <div className="flex justify-between"><span>Khẩn cấp:</span> <Badge className="bg-red-600">{criticalCount}</Badge></div>
+                  <div className="flex justify-between font-semibold">
+                    <span>Đang chờ:</span> 
+                    <Badge variant="destructive">{activeAlerts.filter(a => a.status === 'new').length}</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Đang tiếp nhận:</span> 
+                    <Badge className="bg-blue-500">{activeAlerts.filter(a => a.status === 'acknowledged').length}</Badge>
+                  </div>
                 </CardContent>
               </Card>
 
               <Card className="lg:col-span-2">
-                <CardHeader><CardTitle>SOS Khẩn cấp mới nhất</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
+                <CardHeader><CardTitle>Ca khẩn cấp (Level 4-5)</CardTitle></CardHeader>
+                <CardContent className="grid gap-3">
                   {activeAlerts.filter(a => a.level >= 4).slice(0, 3).map(alert => (
-                    <div key={alert.id} className="flex justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div key={alert.id} className="flex justify-between p-3 bg-red-50 border-l-4 border-l-red-600 rounded">
                       <div>
-                        <div className="font-bold text-red-800">{alert.title}</div>
-                        <div className="text-xs text-red-600">📍 {alert.location}</div>
+                        <div className="font-bold">{alert.title}</div>
+                        <div className="text-xs text-gray-500">{alert.location}</div>
                       </div>
                       <Badge variant="destructive">Cấp {alert.level}</Badge>
                     </div>
@@ -166,36 +186,37 @@ export default function RescuerDashboard() {
               </Card>
             </div>
 
-            <Card>
-              <CardHeader><CardTitle>Bản đồ điều phối</CardTitle></CardHeader>
-              <CardContent>
-                <div className="h-96">
-                  <GoogleMapsComponent 
-                    assets={mockAssets} 
-                    incidents={incidents} 
-                    onAssetClick={setSelectedAsset} 
-                    onIncidentClick={setSelectedIncident} 
-                  />
-                </div>
-              </CardContent>
+            {/* Bản đồ nhanh ở trang chủ - Thay thế mockAssets bằng mảng rỗng */}
+            <Card className="h-[450px]">
+               <GoogleMapsComponent 
+                assets={[]} 
+                incidents={incidents} 
+                onIncidentClick={setSelectedIncident} 
+               />
             </Card>
           </TabsContent>
 
-          <TabsContent value="map">
-            <div className="h-[600px] border rounded-xl overflow-hidden">
-               <GoogleMapsComponent assets={mockAssets} incidents={incidents} onAssetClick={setSelectedAsset} onIncidentClick={setSelectedIncident} />
-            </div>
+          <TabsContent value="map" className="h-[650px] border rounded-xl shadow-lg">
+             <GoogleMapsComponent 
+              assets={[]} 
+              incidents={incidents} 
+              onIncidentClick={setSelectedIncident} 
+             />
           </TabsContent>
 
           <TabsContent value="alerts">
-            <AlertSystem alerts={alerts} onAcknowledge={handleAcknowledgeAlert} onResolve={handleResolveAlert} />
+            <AlertSystem 
+              alerts={alerts} 
+              onAcknowledge={handleAcknowledgeAlert} 
+              onResolve={handleResolveAlert} 
+              onFail={handleFailAlert} 
+            />
           </TabsContent>
 
           <TabsContent value="personnel">
-            <PersonnelManagement personnel={mockPersonnel} onAssign={() => {}} onUpdateStatus={() => {}} />
+            <PersonnelManagement personnel={[]} onAssign={() => {}} onUpdateStatus={() => {}} />
           </TabsContent>
 
-          {/* Các tab khác tạm thời để trống hoặc dùng mock component */}
           <TabsContent value="assets">
             <AssetDashboard assetStatuses={[]} />
           </TabsContent>
@@ -203,20 +224,21 @@ export default function RescuerDashboard() {
           <TabsContent value="analysis">
             <RiskAnalysis riskData={[]} incidentTrends={[]} />
           </TabsContent>
-
         </Tabs>
       </div>
 
-      {/* Modal chi tiết sự cố */}
       {selectedIncident && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[2000]">
           <Card className="max-w-md w-full m-4">
-            <CardHeader><CardTitle>Chi tiết SOS</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <p><strong>Loại:</strong> {selectedIncident.type}</p>
-              <p><strong>Vị trí:</strong> {selectedIncident.location}</p>
-              <p><strong>Thời gian:</strong> {selectedIncident.timestamp}</p>
-              <Button className="w-full" onClick={() => setSelectedIncident(null)}>Đóng</Button>
+            <CardHeader><CardTitle className="text-red-700">Thông tin SOS</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-3 bg-gray-50 rounded">
+                <p><strong>Loại sự cố:</strong> {selectedIncident.type}</p>
+                <p><strong>Địa chỉ:</strong> {selectedIncident.location}</p>
+                <p><strong>Tọa độ:</strong> {selectedIncident.lat.toFixed(4)}, {selectedIncident.lng.toFixed(4)}</p>
+                <p><strong>Gửi lúc:</strong> {selectedIncident.timestamp}</p>
+              </div>
+              <Button className="w-full" onClick={() => setSelectedIncident(null)}>Đóng chi tiết</Button>
             </CardContent>
           </Card>
         </div>

@@ -11,4 +11,16 @@ router.post('/assign/:postId',
     controller.acceptRescue
 );
 
+router.post('/complete/:postId', 
+    auth, 
+    role(['rescuer']),
+    controller.completeRescue // Hàm này bạn vừa thêm vào controller ở bước trước
+);
+
+router.post('/fail/:postId', 
+    auth, 
+    role(['rescuer']),
+    controller.failRescue // Hàm này bạn vừa thêm vào controller ở bước trước
+);
+
 module.exports = router;

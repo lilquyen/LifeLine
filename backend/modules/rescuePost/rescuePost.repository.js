@@ -30,8 +30,8 @@ const getAllPosts = async () => {
             title,
             description,
             urgency_level,
-            ST_Y(location) AS lat,
-            ST_X(location) AS lng,
+            ST_Y(location::geometry) AS lat,
+            ST_X(location::geometry) AS lng,
             address,
             status,
             created_at

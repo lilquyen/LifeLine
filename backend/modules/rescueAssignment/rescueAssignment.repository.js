@@ -33,8 +33,32 @@ const updatePostStatus = async (postId, status) => {
     return result.rows[0];
 }
 
+// Đánh dấu hoàn thành
+const completeAssignment = async (postId) => {
+    await db.query(`
+        UPDATE rescue_assignments 
+        SET status = 'completed', finished_at = NOW() 
+        WHERE request_id = $1 AND status = 'accepted'
+    `, [postId]);
+};
+
+// Hủy phân công (Khi thất bại/muốn nhường người khác)
+const cancelAssignment = async (postId) => {
+    const query = `
+        UPDATE rescue_assignments 
+        SET status = 'cancelled' 
+        WHERE request_id = $1 AND status = 'accepted'
+        RETURNING *;
+    `;
+    const result = await db.query(query, [postId]);
+    return result.rows[0];
+};
+
+
 module.exports = {
     createAssignment,
     findActiveAssignment,
-    updatePostStatus
+    updatePostStatus,
+    completeAssignment, // Thêm mới
+    cancelAssignment // Thêm mới
 }

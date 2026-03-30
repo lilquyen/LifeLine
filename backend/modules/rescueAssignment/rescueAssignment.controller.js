@@ -20,6 +20,26 @@ const acceptRescue = async (req, res) => {
     }
 }
 
+const completeRescue = async (req, res) => {
+    try {
+        const result = await service.completeRescue(req.params.postId);
+        res.json(result);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+}
+
+const failRescue = async (req, res) => {
+    try {
+        const result = await service.failRescue(req.params.postId);
+        res.json(result);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+}
+
 module.exports = {
-    acceptRescue
+    acceptRescue,
+    completeRescue,
+    failRescue
 }
