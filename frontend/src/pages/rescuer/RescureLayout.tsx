@@ -1,5 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { MessageSquare } from 'lucide-react';
 import { Map, Bell, Users, LogOut, ShieldAlert } from 'lucide-react'; // Lấy icon từ thư viện có sẵn của bạn
 // import useAuthStore from '../../stores/authStore'; // Mở comment dòng này nếu bạn muốn dùng store để đăng xuất
 
@@ -32,6 +33,14 @@ export default function RescureLayout() {
           >
             <Map size={20} />
             Bản đồ Cứu hộ
+          </Link>
+
+          <Link 
+            to="/rescuer/messages" 
+            className="flex items-center gap-3 px-4 py-3 bg-red-600 rounded-lg text-white font-medium shadow-md shadow-red-900/20 hover:bg-red-700 transition"
+          >
+            <MessageSquare size={20} />
+            Nhắn tin
           </Link>
         </nav>
 

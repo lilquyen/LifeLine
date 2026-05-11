@@ -1,3 +1,4 @@
+const { get } = require('http');
 const db = require('../../config/db');
 
 const createConversation = async (data) => {
@@ -50,8 +51,73 @@ const inactiveConversation = async (conversationId) => {
   return result.rowCount > 0;
 };
 
+const getMyConversations = async (userId) => {
+
+  const result = await db.query(
+    `
+    SELECT
+      c.id,
+      c.request_id,
+
+      u.id AS other_user_id,
+      u.full_name AS other_user_name,
+      u.avatar_url AS other_user_avatar,
+
+      lm.content AS last_message,
+      lm.sent_at AS last_message_time,
+
+      COUNT(
+        CASE 
+          WHEN mu.sender_id != $1 AND mu.is_read = FALSE 
+          THEN 1 
+        END
+      ) AS unread_count
+
+    FROM conversations c
+
+    LEFT JOIN users u
+      ON u.id =
+        CASE
+          WHEN c.victim_id = $2
+          THEN c.rescuer_id
+          ELSE c.victim_id
+        END
+
+    LEFT JOIN messages lm
+      ON lm.id = (
+        SELECT id
+        FROM messages
+        WHERE conversation_id = c.id
+        ORDER BY sent_at DESC
+        LIMIT 1
+      )
+
+    LEFT JOIN messages mu
+      ON mu.conversation_id = c.id
+
+    WHERE c.victim_id = $3
+       OR c.rescuer_id = $4
+
+    GROUP BY
+      c.id,
+      c.request_id,
+      u.id,
+      u.full_name,
+      lm.content,
+      lm.sent_at
+
+    ORDER BY lm.sent_at DESC
+    `,
+    [userId, userId, userId, userId]  
+  );
+
+  return result.rows;
+};
+
+
 module.exports = {
   createConversation,
   findConversationByRequestId,
-  inactiveConversation
+  inactiveConversation,
+  getMyConversations
 };

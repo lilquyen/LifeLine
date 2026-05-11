@@ -52,7 +52,12 @@ const getConversationByRequestId = async (requestId) => {
   }
 };
 
+const getMyConversations = async (userId) => {
+  return await conversationRepository.getMyConversations(userId);
+}
+
 module.exports = {
   createConversation,
-  getConversationByRequestId
+  getConversationByRequestId,
+  getMyConversations
 };

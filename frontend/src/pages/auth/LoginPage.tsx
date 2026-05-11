@@ -33,7 +33,7 @@ export default function LoginPage() {
         toast.success('Đăng nhập thành công!');
 
         if (res.data.user.role === 'victim')  navigate('/victim/');
-        if (res.data.user.role === 'rescuer') navigate('/rescuer/');
+        if (res.data.user.role === 'rescuer') navigate('/rescuer/dashboard');
         if (res.data.user.role === 'admin')   navigate('/admin/');
       } else {
         await api.post('/auth/register', form);

@@ -1,5 +1,6 @@
 const conversationService = require('./conversation.service');
 const rescuePostService = require('../rescuePost/rescuePost.service');
+const { get } = require('http');
 
 const createConversation = async (req, res) => {
   try {
@@ -47,7 +48,25 @@ const getConversationByRequestId = async (req, res) => {
   }
 }
 
+const getMyConversations = async (req, res) => {
+  try {
+    const conversations = await conversationService.getMyConversations(req.user.id);
+
+    res.status(200).json({
+      success: true,
+      data: conversations
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+}
+
 module.exports = {
   createConversation,
-  getConversationByRequestId
+  getConversationByRequestId,
+  getMyConversations
 };
