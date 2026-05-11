@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Badge } from './ui/badge';
+import React from 'react';
 
 // Sửa lỗi hiển thị icon của Leaflet trong React
 import 'leaflet/dist/leaflet.css';

@@ -1,9 +1,22 @@
 const service = require('./rescuePost.service');
+const imageService = require('../../common/services/uploadImage.service');
+const { get } = require('http');
 
 const createPost = async (req, res) => {
 
+    console.log("req.body: \n", req.body);   // text
+    console.log("req.files: \n",req.files);  // file
+
     try {
-        const post = await service.createPost(req.body, req.user.id);
+        const imageUrls = await imageService.uploadImages(req.files);
+
+        const post = await service.createPost(
+            {
+                ...req.body,
+                images: imageUrls,
+            }, 
+            req.user.id
+        );
         
         res.status(201).json({
             message: 'Rescue post created successfully',
@@ -46,8 +59,29 @@ const getPostById = async (req, res) => {
     }
 }
 
+const getAllPostByUserId = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const posts = await service.getAllPostByUserId(userId);
+
+        return res.status(200).json({
+            success: true,
+            data: posts
+        });
+    } catch (err) {
+        console.log(err);
+
+        return res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+}
+
 module.exports = {
     createPost,
     getAllPosts,
-    getPostById
+    getPostById,
+    getAllPostByUserId
 }

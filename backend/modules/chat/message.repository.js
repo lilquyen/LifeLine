@@ -43,5 +43,6 @@ const markRead = async (conversationId, userId) => {
 
 module.exports = {
     insertMessage,
-    markRead
+    markRead,
+    findMessagesByConversationId
 }

@@ -11,7 +11,6 @@ const getMessage = async (req, res) => {
 }
 
 const sentTextMessage = async (req, res) => {
-    console.log('da bam');
     try {
         const { content } = req.body;
         const message = await messageService.sentMessage({

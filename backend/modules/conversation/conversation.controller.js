@@ -1,0 +1,53 @@
+const conversationService = require('./conversation.service');
+const rescuePostService = require('../rescuePost/rescuePost.service');
+
+const createConversation = async (req, res) => {
+  try {
+    const rescure_id = req.user.id;
+    const request_id = req.params.postId;
+    const victim_id = rescuePostService.getVictimByPostId(request_id);
+
+    const conversation = await conversationService.createConversation(rescure_id, victim_id, request_id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Conversation created successfully',
+      data: conversation
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+}
+
+const getConversationByRequestId = async (req, res) => {
+  try {
+    const conversation = await conversationService.getConversationByRequestId(req.params.requestId);
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Conversation not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: conversation
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+}
+
+module.exports = {
+  createConversation,
+  getConversationByRequestId
+};

@@ -33,11 +33,6 @@ export default function RescureLayout() {
             <Map size={20} />
             Bản đồ Cứu hộ
           </Link>
-
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
-            <Users size={20} />
-            Đội ngũ
-          </button>
         </nav>
 
         {/* Nút Đăng xuất ở đáy */}
@@ -58,7 +53,7 @@ export default function RescureLayout() {
         {/* HEADER (Thanh ngang trên cùng) */}
         <header className="h-16 bg-white shadow-sm flex items-center justify-between px-8 z-10">
           <h2 className="text-xl font-semibold text-slate-800">
-            Tổng đài Điều phối Tình nguyện viên
+            Tổng đài Tình nguyện viên
           </h2>
           
           <div className="flex items-center gap-5">
