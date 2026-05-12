@@ -47,7 +47,7 @@ module.exports = {
 
 const completeRescue = async (req, res) => {
     try {
-        const result = await service.completeRescue(req.params.postId);
+        const result = await rescueService.completeRescue(req.params.postId);
         res.json(result);
     } catch (err) {
         res.status(400).json({ message: err.message });
@@ -56,8 +56,20 @@ const completeRescue = async (req, res) => {
 
 const failRescue = async (req, res) => {
     try {
-        const result = await service.failRescue(req.params.postId);
+        const result = await rescueService.failRescue(
+            postId = req.params.postId
+        );
         res.json(result);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+}
+
+const getMyAllAssignment = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const assignments = await rescueService.getMyAllAssignment(userId);
+        res.json(assignments);
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
@@ -66,5 +78,6 @@ const failRescue = async (req, res) => {
 module.exports = {
     acceptRescue,
     completeRescue,
-    failRescue
+    failRescue,
+    getMyAllAssignment
 }

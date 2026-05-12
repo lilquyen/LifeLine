@@ -54,11 +54,40 @@ const cancelAssignment = async (postId) => {
     return result.rows[0];
 };
 
+const getMyAllAssignment = async (rescuerId) => {
+    const result = await db.query(`
+        SELECT 
+            ra.id AS assignment_id,
+            ra.request_id,
+            rr.title AS request_title,
+            rr.description AS request_description,
+            rr.urgency_level,
+            ST_Y(rr.location::geometry) AS lat,
+            ST_X(rr.location::geometry) AS lng,
+            rr.address,
+            rr.status AS request_status,
+            ra.status AS assignment_status,
+            ra.assigned_at,
+            ra.finished_at
+
+        FROM rescue_assignments ra
+
+        JOIN rescue_requests rr
+            ON rr.id = ra.request_id
+
+        WHERE ra.rescuer_id = $1
+        ORDER BY ra.assigned_at DESC
+    `, [rescuerId]);
+
+    return result.rows;
+}
+
 
 module.exports = {
     createAssignment,
     findActiveAssignment,
     updatePostStatus,
-    completeAssignment, // Thêm mới
-    cancelAssignment // Thêm mới
+    completeAssignment, 
+    cancelAssignment,
+    getMyAllAssignment
 }

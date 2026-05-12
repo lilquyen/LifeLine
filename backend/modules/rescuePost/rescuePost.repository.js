@@ -47,19 +47,32 @@ const getAllPosts = async () => {
 const getPostById = async (id) => {
     const result = await db.query(`
         SELECT 
-            id,
-            user_id,
-            title,
-            description,
-            urgency_level,
-            ST_Y(location) AS lat,
-            ST_X(location) AS lng,
-            address,
-            status,
-            created_at
-        FROM rescue_requests 
-        WHERE id = $1`, [id]
-    );
+            rr.id,
+            rr.user_id,
+            rr.title,
+            rr.description,
+            rr.urgency_level,
+            ST_Y(rr.location) AS lat,
+            ST_X(rr.location) AS lng,
+            rr.address,
+            rr.status,
+            rr.created_at,
+
+            COALESCE(
+                ARRAY_AGG(ri.image_url)
+                FILTER (WHERE ri.image_url IS NOT NULL),
+                '{}'
+            ) AS image_urls
+
+        FROM rescue_requests rr
+
+        LEFT JOIN request_images ri
+            ON ri.request_id = rr.id
+
+        WHERE rr.id = $1
+
+        GROUP BY rr.id
+    `, [id]);
     
     return result.rows[0];
 }
@@ -101,10 +114,32 @@ const getUserIdByRequestId = async (requestId) => {
     return result.rows[0]?.user_id;
 }
 
+const getAllPendingPosts = async () => {
+    const result = await db.query(`
+        SELECT 
+            id,
+            user_id,
+            title,
+            description,
+            urgency_level,
+            ST_Y(location) AS lat,
+            ST_X(location) AS lng,
+            address,
+            status,
+            created_at
+        FROM rescue_requests 
+        WHERE status = 'pending'
+        ORDER BY created_at DESC`
+    );
+    
+    return result.rows;
+}
+
 module.exports = {
     createPost,
     getAllPosts,
     getPostById,
     getAllPostByUserId,
-    getUserIdByRequestId
+    getUserIdByRequestId,
+    getAllPendingPosts
 }

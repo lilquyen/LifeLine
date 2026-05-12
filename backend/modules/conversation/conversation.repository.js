@@ -180,10 +180,46 @@ const getMyConversations = async (userId) => {
   return result.rows;
 };
 
+const getConversationById = async (conversationId) => {
+  const result = await db.query(
+    `
+    SELECT
+      c.id,
+      c.request_id,
+      r.title AS request_title,
+
+      u.id AS other_user_id,
+      u.phone AS other_user_phone,
+      u.full_name AS other_user_name,
+      u.avatar_url AS other_user_avatar
+
+    FROM conversations c
+
+    LEFT JOIN users u
+      ON u.id =
+        CASE
+          WHEN c.victim_id = $2
+          THEN c.rescuer_id
+          ELSE c.victim_id
+        END
+
+    LEFT JOIN rescue_requests r
+      ON r.id = c.request_id  
+
+    WHERE c.id = $1
+      AND c.is_active = TRUE
+    `,
+    [conversationId, conversationId]  
+  );
+
+  return result.rows[0];
+};
+
 
 module.exports = {
   createConversation,
   getConversationByRequestId,
   inactiveConversation,
-  getMyConversations
+  getMyConversations,
+  getConversationById
 };

@@ -52,6 +52,10 @@ const getPostById = async (id) => {
     return post;
 }
 
+const getAllPendingPosts = async () => {
+    return rescuePostRepo.getAllPendingPosts();
+}
+
 const getAllPostByUserId = async (userId) => {
     return rescuePostRepo.getAllPostByUserId(userId);
 }
@@ -65,5 +69,6 @@ module.exports = {
     getAllPosts,
     getPostById,
     getAllPostByUserId,
-    getVictimByPostId
+    getVictimByPostId,
+    getAllPendingPosts
 }

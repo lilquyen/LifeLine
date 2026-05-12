@@ -14,13 +14,19 @@ router.post('/assign/:postId',
 router.post('/complete/:postId', 
     auth, 
     role(['rescuer']),
-    controller.completeRescue // Hàm này bạn vừa thêm vào controller ở bước trước
+    controller.completeRescue 
 );
 
 router.post('/fail/:postId', 
     auth, 
     role(['rescuer']),
-    controller.failRescue // Hàm này bạn vừa thêm vào controller ở bước trước
+    controller.failRescue 
+);
+
+router.get('/my', 
+    auth, 
+    role(['rescuer']),
+    controller.getMyAllAssignment
 );
 
 module.exports = router;

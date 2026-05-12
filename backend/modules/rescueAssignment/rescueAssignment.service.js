@@ -33,8 +33,13 @@ const failRescue = async (postId) => {
     return { message: "Đã hủy tiếp nhận, ca cứu hộ đã quay lại danh sách chờ." };
 }
 
+const getMyAllAssignment = async (rescuerId) => {
+    return await repo.getMyAllAssignment(rescuerId);
+}
+
 module.exports = {
     acceptRescue,
     completeRescue, 
-    failRescue      
+    failRescue,
+    getMyAllAssignment      
 }

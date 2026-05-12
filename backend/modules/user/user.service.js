@@ -64,8 +64,13 @@ const getMe = async (userId) => {
     return user;
 }
 
+const updateLocation = async (userId, lat, lng) => {
+    return await repo.updateLocation(userId, lat, lng);
+}
+
 module.exports = {
     register,
     login,
-    getMe
+    getMe,
+    updateLocation
 }

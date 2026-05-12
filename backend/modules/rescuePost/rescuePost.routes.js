@@ -12,10 +12,8 @@ router.post('/post',
     upload.array('images'),
     controller.createPost
 );
-
+router.get('/pending', controller.getAllPendingPosts);
 router.get('/', controller.getAllPosts);
 router.get('/my-posts', auth, controller.getAllPostByUserId);
 router.get('/:id', controller.getPostById);
-
-
 module.exports = router;

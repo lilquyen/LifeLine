@@ -10,4 +10,6 @@ router.post('/login', controller.login);
 router.get('/me', auth, controller.getMe);
 // router.put('/me', auth, controller.updateProfile);
 
+router.put('/update-location', auth, controller.updateLocation)
+
 module.exports = router;
