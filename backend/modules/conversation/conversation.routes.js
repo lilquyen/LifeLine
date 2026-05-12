@@ -11,6 +11,7 @@ router.post(
 
 router.get(
   '/request/:requestId',
+  authMiddleware,
   conversationController.getConversationByRequestId
 )
 

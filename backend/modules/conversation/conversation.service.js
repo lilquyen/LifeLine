@@ -37,10 +37,11 @@ const createConversation = async (data) => {
   }
 };
 
-const getConversationByRequestId = async (requestId) => {
+const getConversationByRequestId = async (userId, requestId) => {
   try {
     const conversation =
-      await conversationRepository.findConversationByRequestId(
+      await conversationRepository.getConversationByRequestId(
+        userId,
         requestId
       );
 

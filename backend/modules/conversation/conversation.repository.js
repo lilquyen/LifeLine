@@ -25,16 +25,74 @@ const createConversation = async (data) => {
   return result.rows[0];
 };
 
-const findConversationByRequestId = async (requestId) => {
-  const query = `
-    SELECT *
-    FROM conversations
-    WHERE request_id = $1
-      AND is_active = TRUE
-    LIMIT 1
-  `;
+const getConversationByRequestId = async (userId, requestId) => {
+  const result = await db.query(
+    `
+    SELECT
+      c.id,
+      c.request_id,
+      r.title AS request_title,
 
-  const result = await db.query(query, [requestId]);
+      u.id AS other_user_id,
+      u.phone AS other_user_phone,
+      u.full_name AS other_user_name,
+      u.avatar_url AS other_user_avatar,
+
+      lm.content AS last_message,
+      lm.sent_at AS last_message_time,
+
+      COUNT(
+        CASE 
+          WHEN mu.sender_id != $1 AND mu.is_read = FALSE 
+          THEN 1 
+        END
+      ) AS unread_count
+
+    FROM conversations c
+
+    LEFT JOIN users u
+      ON u.id =
+        CASE
+          WHEN c.victim_id = $2
+          THEN c.rescuer_id
+          ELSE c.victim_id
+        END
+
+    LEFT JOIN messages lm
+      ON lm.id = (
+        SELECT id
+        FROM messages
+        WHERE conversation_id = c.id
+        ORDER BY sent_at DESC
+        LIMIT 1
+      )
+
+    LEFT JOIN messages mu
+      ON mu.conversation_id = c.id
+
+    LEFT JOIN rescue_requests r
+      ON r.id = c.request_id  
+
+    WHERE c.request_id = $3
+      AND c.is_active = TRUE
+      AND (c.victim_id = $4 OR c.rescuer_id = $5)
+
+    GROUP BY
+      c.id,
+      c.request_id,
+      u.id,
+      u.full_name,
+      lm.content,
+      lm.sent_at,
+      r.title,
+      u.phone,
+      u.avatar_url
+
+    ORDER BY lm.sent_at DESC
+    LIMIT 1
+    `,
+    [userId, userId, requestId, userId, userId]  
+  );
 
   return result.rows[0];
 };
@@ -125,7 +183,7 @@ const getMyConversations = async (userId) => {
 
 module.exports = {
   createConversation,
-  findConversationByRequestId,
+  getConversationByRequestId,
   inactiveConversation,
   getMyConversations
 };

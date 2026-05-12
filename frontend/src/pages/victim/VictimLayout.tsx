@@ -22,14 +22,7 @@ export default function VictimLayout() {
           </div>
 
           <div className="flex items-center gap-6">
-            <NavLink
-              to="/victim/dashboard"
-              className={({ isActive }) =>
-                `text-sm font-medium ${isActive ? 'text-red-600' : 'text-gray-600 hover:text-red-600'}`
-              }
-            >
-              Trang chủ
-            </NavLink>
+            
             <NavLink
               to="/victim/create-request"
               className={({ isActive }) =>

@@ -26,7 +26,7 @@ const createConversation = async (req, res) => {
 
 const getConversationByRequestId = async (req, res) => {
   try {
-    const conversation = await conversationService.getConversationByRequestId(req.params.requestId);
+    const conversation = await conversationService.getConversationByRequestId(req.user.id, req.params.requestId);
 
     if (!conversation) {
       return res.status(404).json({

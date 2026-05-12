@@ -32,7 +32,7 @@ export default function LoginPage() {
         login(res.data.user, res.data.token);
         toast.success('Đăng nhập thành công!');
 
-        if (res.data.user.role === 'victim')  navigate('/victim/');
+        if (res.data.user.role === 'victim')  navigate('/victim/create-request');
         if (res.data.user.role === 'rescuer') navigate('/rescuer/dashboard');
         if (res.data.user.role === 'admin')   navigate('/admin/');
       } else {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import MyPostCard from '../../components/victim/MyPostCard';
 import { GoogleMapsComponent } from '../../components/LeafletComponent';
+import ChatWindow from '../../components/chat/ChatWindow';
 
 // 1. Định nghĩa Interface cho Incident trên bản đồ
 export interface IncidentMapItem {
@@ -24,9 +25,37 @@ const MyPostsPage = () => {
   const [mapAssets, setMapAssets] = useState<any[]>([]);
   const [mapIncidents, setMapIncidents] = useState<IncidentMapItem[]>([]);
 
+  const [activeConversation, setActiveConversation] = useState<any>(null);
+  const [loadingChat, setLoadingChat] = useState(false);
+
   useEffect(() => {
     fetchMyPosts();
   }, []);
+
+  useEffect(() => {
+    const getConversationByRequest = async () => {
+      if (selectedPost && selectedPost.id && selectedPost.status !== 'pending') {
+        try {
+          setLoadingChat(true);
+          const response = await api.get(`/conversations/request/${selectedPost.id}`);
+          if (response.data.success) {
+            setActiveConversation(response.data.data);
+          } else {
+            setActiveConversation(null);
+          }
+        } catch (error) {
+          console.error("Lỗi lấy hội thoại:", error);
+          setActiveConversation(null);
+        } finally {
+          setLoadingChat(false);
+        }
+      } else {
+        setActiveConversation(null);
+      }
+    };
+  
+    getConversationByRequest();
+  }, [selectedPost]);
 
   // 3. Cập nhật mapIncidents mỗi khi selectedPost thay đổi
   useEffect(() => {
@@ -42,6 +71,8 @@ const MyPostsPage = () => {
         status: selectedPost.status === 'pending' ? 'active' : 'resolved'
       };
       setMapIncidents([mapped]);
+
+
     } else {
       setMapIncidents([]);
     }
@@ -120,7 +151,7 @@ const MyPostsPage = () => {
       <div className="w-3/5 flex flex-col h-full">
         
         {/* PHẦN TRÊN: BẢN ĐỒ */}
-          <div className="h-1/2 border-b relative bg-slate-100">
+          <div className="flex-[4] relative bg-slate-100">
             {/* Kiểm tra trực tiếp selectedPost có tọa độ không */}
             {selectedPost && selectedPost.lat && selectedPost.lng ? (
               <GoogleMapsComponent 
@@ -145,54 +176,40 @@ const MyPostsPage = () => {
             )}
           </div>
 
-        {/* PHẦN DƯỚI: KHUNG CHAT (TẠM ĐỂ TRỐNG) */}
-        <div className="h-1/2 flex flex-col bg-white">
+        {/* PHẦN DƯỚI: KHUNG CHAT */}
+        <div className="h-1/2 flex flex-col bg-white overflow-hidden border-t">
           {selectedPost?.status === 'pending' ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center animate-pulse">
-              <div className="text-5xl mb-4">📡</div>
+            /* 1. Trạng thái Đang chờ (Chưa có ai nhận) */
+            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
+              <div className="text-5xl mb-4 animate-bounce">📡</div>
               <h2 className="text-xl font-bold text-gray-700">Đang tìm người hỗ trợ...</h2>
-              <p className="text-gray-500 mt-2">Vị trí của bạn đang được ưu tiên hiển thị cho các đội cứu hộ gần nhất.</p>
+              <p className="text-sm text-gray-500 mt-2">Hệ thống chat sẽ mở khi có người tiếp nhận.</p>
+            </div>
+          ) : loadingChat ? (
+            /* 2. Trạng thái đang tải dữ liệu hội thoại */
+            <div className="flex-1 flex items-center justify-center text-gray-400 italic">
+              Đang kết nối hội thoại...
+            </div>
+          ) : activeConversation ? (
+            /* 3. Đã tìm thấy hội thoại -> Hiển thị ChatWindow */
+            <div className="flex-1 overflow-hidden">
+              <ChatWindow 
+                key={activeConversation.id} // Dùng ID của hội thoại làm key
+                conversationId={activeConversation.id}
+                conversationTitle={activeConversation.other_user_name}
+                conversationAvatar={activeConversation.other_user_avatar}
+                conversationPhone={activeConversation.other_user_phone}
+              />
             </div>
           ) : selectedPost ? (
-            <div className="flex-1 flex flex-col overflow-hidden">
-               {/* Header Chat */}
-               <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-red-600 text-white rounded-full flex items-center justify-center font-bold shadow-sm">
-                      H
-                    </div>
-                    <div>
-                      <div className="font-bold text-slate-800">Cứu hộ viên hỗ trợ</div>
-                      <div className="text-xs text-green-500 font-medium italic">Vừa mới hoạt động</div>
-                    </div>
-                  </div>
-               </div>
-
-               {/* Vùng tin nhắn */}
-               <div className="flex-1 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-gray-50 p-4">
-                  <div className="flex justify-center">
-                    <span className="bg-white px-3 py-1 rounded-full text-[10px] text-gray-400 border shadow-sm uppercase font-bold">
-                      Bắt đầu cuộc trò chuyện
-                    </span>
-                  </div>
-               </div>
-
-               {/* Input Chat (Tạm thời) */}
-               <div className="p-4 border-t bg-white flex gap-2">
-                  <input 
-                    disabled
-                    type="text" 
-                    placeholder="Tính năng chat đang được cập nhật..." 
-                    className="flex-1 border border-gray-200 rounded-full px-5 py-2 bg-gray-50 text-sm italic"
-                  />
-                  <button className="bg-gray-300 text-white p-2 rounded-full w-10 h-10 cursor-not-allowed">
-                    ➤
-                  </button>
-               </div>
+            /* 4. Đã nhận nhưng không lấy được hội thoại (Lỗi hoặc chưa khởi tạo) */
+            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-6 text-center">
+              <p className="text-sm">Không thể kết nối với người dùng này.</p>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-400">
-               Chọn bài đăng để kết nối liên lạc
+            /* 5. Chưa chọn bài đăng nào */
+            <div className="flex-1 flex items-center justify-center text-gray-400 bg-gray-50">
+              Chọn một yêu cầu để xem tin nhắn
             </div>
           )}
         </div>
