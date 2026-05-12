@@ -57,7 +57,7 @@ export const ConfirmAcceptModal: React.FC<ConfirmAcceptModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 backdrop-blur-[1px] flex items-center justify-center z-[9999]">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
         <div className="flex justify-between items-center p-4 border-b">
           <h3 className="text-lg font-bold">Xác nhận nhận cứu hộ</h3>
