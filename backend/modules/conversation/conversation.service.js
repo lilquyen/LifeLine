@@ -11,7 +11,7 @@ const createConversation = async (data) => {
     }
 
     const existingConversation =
-      await conversationRepository.findConversationByRequestId(
+      await conversationRepository.getConversationByRequestId(
         data.requestId
       );
 
@@ -57,8 +57,13 @@ const getMyConversations = async (userId) => {
   return await conversationRepository.getMyConversations(userId);
 }
 
+const getConversationById = async (conversationId) => {
+  return await conversationRepository.getConversationById(conversationId);
+}
+
 module.exports = {
   createConversation,
   getConversationByRequestId,
-  getMyConversations
+  getMyConversations,
+  getConversationById
 };

@@ -45,6 +45,20 @@ const getAllPosts = async (req, res) => {
     }
 }
 
+const getAllPendingPosts = async (req, res) => {
+    try {
+        const posts = await service.getAllPendingPosts();
+
+        res.json(posts);
+    } catch (err) {
+        console.log(err);
+
+        res.status(500).json({
+            message: 'Server error'
+        });
+    }
+}
+
 const getPostById = async (req, res) => {
     try {
         const post = await service.getPostById(req.params.id);
@@ -79,9 +93,12 @@ const getAllPostByUserId = async (req, res) => {
     }
 }
 
+
+
 module.exports = {
     createPost,
     getAllPosts,
     getPostById,
-    getAllPostByUserId
+    getAllPostByUserId,
+    getAllPendingPosts
 }

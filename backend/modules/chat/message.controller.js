@@ -1,4 +1,5 @@
 const messageService = require('./message.service');
+const conversationService = require('../conversation/conversation.service');
 const imageService = require('../../common/services/uploadImage.service');
 
 const getMessage = async (req, res) => {
@@ -53,9 +54,31 @@ const markRead = async (req, res) => {
     }
 }
 
+const sendNotiMessage = async (req, res) => {
+    try {
+        const conversationId = await conversationService.getConversationByRequestId(req.user.id, req.params.requestId);
+
+        if (!conversationId) {
+            return res.status(404).json({ error: 'Conversation not found' });
+        }
+
+        const message = await messageService.sentMessage({
+            conversationId: conversationId.id,
+            senderId: req.user.id,
+            content: req.body.content
+        });
+
+        res.status(201).json(message);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+}
+
 module.exports = {
     getMessage,
     sentTextMessage,
     markRead,
-    sentImageMessage
+    sentImageMessage,
+    sendNotiMessage
 }

@@ -1,194 +1,130 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-// 1. Import Types
-import { AlertItem } from '../../types'; 
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
-import { Button } from '../../components/ui/button';
-import { GoogleMapsComponent } from '../../components/LeafletComponent'; // Bản chất là Leaflet
-import { AssetDashboard } from '../../components/AssetDashboard';
-import { AlertSystem } from '../../components/AlertSystem';
-import { PersonnelManagement } from '../../components/PersonnelManagement';
-import { RiskAnalysis } from '../../components/RiskAnalysis';
-
-import { DashboardOverview } from '../../components/rescuer/DashboardOverview';
-import { IncidentDetailModal } from '../../components/rescuer/InciedentDetailModal';
-
-
-export interface IncidentMapItem {
-  id: string;
-  type: string;
-  level: 1 | 2 | 3 | 4 | 5;
-  location: string;
-  lat: number;
-  lng: number;
-  timestamp: string;
-  status: 'active' | 'escalated' | 'resolved';
-}
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { RescuerMap } from '../../components/rescuer/RescuerMap';
+import { PendingRequestsList } from '../../components/rescuer/PendingRequestsList';
+import { RequestDetailModal } from '../../components/rescuer/RequestDetailModal';
+import { ConfirmAcceptModal } from '../../components/rescuer/ConfirmAcceptModal';
+import { LocationUpdater } from '../../components/rescuer/LocationUpdater';
+import { fetchPendingRequests, assignRequest, updateLocation, fetchAllRequests } from '../../services/rescuerApi';
 
 export default function RescuerDashboard() {
-  const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [incidents, setIncidents] = useState<IncidentMapItem[]>([]);
-  
-  const [selectedAsset, setSelectedAsset] = useState<any>(null);
-  const [selectedIncident, setSelectedIncident] = useState<any>(null);
+  const [pending, setPending] = useState<any[]>([]);
+  const [allRequests, setAllRequests] = useState<any[]>([]);
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);   // cho modal chi tiết
+  const [acceptingId, setAcceptingId] = useState<number | null>(null);              // cho modal xác nhận
   const [loading, setLoading] = useState(true);
+  const [rescuerLocation, setRescuerLocation] = useState<{ lat: number; lng: number; name: string } | undefined>();
+  const navigate = useNavigate();
 
-  // Gọi API lấy dữ liệu từ Backend
   useEffect(() => {
-    const fetchRescueData = async () => {
-      try {
-        const response = await axios.get('http://localhost:5000/api/rescue-posts');
-        const dbData = response.data;
-
-        if (Array.isArray(dbData)) {
-          // 1. Mapped cho danh sách Cảnh báo (AlertSystem)
-          const mappedAlerts: AlertItem[] = dbData.map((post: any) => ({
-            id: post.id, // Đổi từ _id thành id
-            level: Number(post.urgency_level) as 1 | 2 | 3 | 4 | 5 || 2,
-            title: post.title || 'Yêu cầu cứu hộ',
-            description: post.description || 'Không có mô tả',
-            location: post.address || 'Chưa xác định',
-            timestamp: new Date(post.created_at).toLocaleString('vi-VN'), // Đổi sang created_at
-            status: post.status === 'pending' ? 'new' : (post.status === 'assigned' ? 'acknowledged' : 'resolved')
-          }));
-
-          // 2. Mapped cho điểm trên Bản đồ (Leaflet)
-          const mappedIncidents: IncidentMapItem[] = dbData.map((post: any) => ({
-            id: post.id,
-            type: post.title || 'Sự cố',
-            level: Number(post.urgency_level) as 1 | 2 | 3 | 4 | 5 || 2,
-            location: post.address || 'Chưa xác định',
-            lat: Number(post.lat) || 10.7769, // Lấy từ ST_Y
-            lng: Number(post.lng) || 106.7009, // Lấy từ ST_X
-            timestamp: new Date(post.created_at).toLocaleString('vi-VN'),
-            status: post.status === 'pending' ? 'active' : 'resolved' // Map status
-          }));
-
-          setAlerts(mappedAlerts);
-          setIncidents(mappedIncidents);
-        }
-      } catch (error) {
-        console.error("Lỗi kết nối API:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRescueData();
+    loadPending();
+    loadAllRequests();
+    const savedLat = localStorage.getItem('rescuer_lat');
+    const savedLng = localStorage.getItem('rescuer_lng');
+    if (savedLat && savedLng) {
+      setRescuerLocation({ lat: parseFloat(savedLat), lng: parseFloat(savedLng), name: 'Vị trí của bạn' });
+    }
   }, []);
 
-  // --- Handlers xử lý API ---
-  const handleAcknowledgeAlert = async (alertId: string) => {
+  const loadPending = async () => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:5000/api/assignments/assign/${alertId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'acknowledged' } : a));
-    } catch (error: any) {
-      alert(error.response?.data?.message || "Lỗi tiếp nhận!");
+      const res = await fetchPendingRequests();
+      setPending(res.data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleResolveAlert = async (alertId: string) => {
+  const loadAllRequests = async () => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:5000/api/assignments/complete/${alertId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'resolved' } : a));
-      alert("Xác nhận hoàn thành ca cứu hộ!");
-    } catch (error: any) {
-      alert("Lỗi: " + (error.response?.data?.message || error.message));
+      const res = await fetchAllRequests();
+      setAllRequests(res.data);
+    } catch (error) {
+      console.error(error);
     }
   };
 
-  const handleFailAlert = async (alertId: string) => {
-    if (!window.confirm("Giải phóng ca cứu hộ này?")) return;
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:5000/api/assignments/fail/${alertId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'new' } : a));
-    } catch (error: any) {
-      alert("Lỗi khi hủy: " + error.message);
-    }
+  const handleAcceptRequest = (requestId: number) => {
+    setAcceptingId(requestId);
   };
 
-  const activeAlerts = alerts.filter(a => a.status !== 'resolved');
-  const criticalCount = activeAlerts.filter(a => a.level >= 4).length;
+  const handleConfirmAccept = async (lat: number, lng: number) => {
+    if (!acceptingId) return;
+    // Cập nhật vị trí
+    await updateLocation(lat, lng);
+    // Nhận ca
+    const assignRes = await assignRequest(acceptingId);
+    const conversation = assignRes.data.conversation;
+    if (conversation && conversation.id) {
+      navigate(`/rescuer/conversations/${conversation.id}`);
+    }
+    // Refresh danh sách pending
+    await loadPending();
+    setAcceptingId(null);
+  };
 
-  if (loading) return <div className="p-10 text-center font-bold text-red-600 animate-pulse">Đang kết nối hệ thống chỉ huy...</div>;
+  const getRequestTitle = (id: number) => {
+    const req = pending.find(r => r.id === id);
+    return req ? req.title : '';
+  };
+
+  const mapPosts = allRequests.map(post => ({
+    id: post.id,
+    lat: post.lat,
+    lng: post.lng,
+    title: post.title,
+    status: post.status,
+    urgencyLevel: post.urgency_level, 
+  }));
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col w-full">
-      <header className="bg-white border-b p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Trung tâm Cứu trợ LineLife</h1>
-            <p className="text-sm text-gray-500 italic font-medium">Real-time PostgreSQL Data Stream</p>
-          </div>
-          <Badge variant="destructive" className={activeAlerts.length > 0 ? "animate-pulse px-4 py-1" : ""}>
-            {activeAlerts.length} SOS ĐANG HOẠT ĐỘNG
-          </Badge>
-        </div>
-      </header>
-
-      <div className="p-6 flex-1 overflow-auto">
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 bg-slate-100 p-1">
-            <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-            <TabsTrigger value="map">Bản đồ thực tế</TabsTrigger>
-            <TabsTrigger value="alerts">Danh sách SOS</TabsTrigger>
-            <TabsTrigger value="personnel">Nhân sự</TabsTrigger>
-            <TabsTrigger value="assets">Thiết bị</TabsTrigger>
-            <TabsTrigger value="analysis">Phân tích</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6 animate-in fade-in duration-500">
-            {/* Sử dụng Component đã tách */}
-            <DashboardOverview alerts={alerts} />
-
-            <Card className="h-[450px] overflow-hidden border-2 border-white shadow-lg rounded-xl">
-               <GoogleMapsComponent 
-                assets={[]} 
-                incidents={incidents} 
-                onIncidentClick={setSelectedIncident} 
-               />
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="map" className="h-[70vh] border rounded-xl shadow-lg overflow-hidden">
-             <GoogleMapsComponent 
-              assets={[]} 
-              incidents={incidents} 
-              onIncidentClick={setSelectedIncident} 
-             />
-          </TabsContent>
-
-          <TabsContent value="alerts">
-            <AlertSystem 
-              alerts={alerts} 
-              onAcknowledge={handleAcknowledgeAlert} 
-              onResolve={handleResolveAlert} 
-              onFail={handleFailAlert} 
-            />
-          </TabsContent>
-          
-          {/* Các tab khác giữ nguyên... */}
-        </Tabs>
+    <div className="flex flex-col h-full">
+      <div className="bg-white p-4 shadow-sm flex justify-between items-center">
+        <h1 className="text-xl font-bold">Bản đồ cứu hộ</h1>
+        <LocationUpdater onLocationUpdate={(lat, lng) => setRescuerLocation({ lat, lng, name: 'Vị trí của bạn' })} />
       </div>
 
-      {/* Sử dụng Modal đã tách */}
-      <IncidentDetailModal 
-        incident={selectedIncident} 
-        onClose={() => setSelectedIncident(null)} 
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left panel: danh sách pending */}
+        <div className="w-80 bg-white border-r flex flex-col overflow-hidden">
+          <div className="p-3 border-b bg-gray-50 font-semibold">📋 Các ca cứu hộ chưa nhận ({pending.length})</div>
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="p-4 text-center">Đang tải...</div>
+            ) : (
+              <PendingRequestsList
+                requests={pending}
+                onSelect={setSelectedRequestId}
+                onAccept={handleAcceptRequest}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Right panel: map */}
+        <div className="flex-1 relative">
+          <RescuerMap posts={mapPosts} rescuerLocation={rescuerLocation} onPostClick={setSelectedRequestId} />
+        </div>
+      </div>
+
+      {/* Modal chi tiết */}
+      <RequestDetailModal
+        requestId={selectedRequestId}
+        onClose={() => setSelectedRequestId(null)}
+        onAccept={handleAcceptRequest}
       />
+
+      {/* Modal xác nhận nhận ca */}
+      {acceptingId && (
+        <ConfirmAcceptModal
+          requestId={acceptingId}
+          requestTitle={getRequestTitle(acceptingId)}
+          onClose={() => setAcceptingId(null)}
+          onConfirm={handleConfirmAccept}
+        />
+      )}
     </div>
   );
 }

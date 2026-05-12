@@ -43,8 +43,27 @@ const getMe = async (req, res) => {
     }
 };
 
+const updateLocation = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { latitude, longitude } = req.body;
+
+        const updatedUser = await service.updateLocation(userId, latitude, longitude);
+
+        res.json({
+            message: 'Location updated successfully',
+            user: updatedUser
+        });
+    } catch (err) {
+        res.status(400).json({
+            message: err.message
+        });
+    }
+}
+
 module.exports = {
     register,
     login,
-    getMe
+    getMe,
+    updateLocation
 }

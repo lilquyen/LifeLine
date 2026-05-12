@@ -9,5 +9,6 @@ router.get('/:conversationId/messages', auth, messageController.getMessage);
 router.post('/:conversationId/messages/text', auth, messageController.sentTextMessage);
 router.post('/:conversationId/messages/image', auth, upload.array('images'), messageController.sentImageMessage);
 router.patch('/:conversationId/messages/read', auth, messageController.markRead);
+router.post('/messages/cancel/:requestId', auth, messageController.sendNotiMessage)
 
 module.exports = router;

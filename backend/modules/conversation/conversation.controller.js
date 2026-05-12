@@ -65,8 +65,33 @@ const getMyConversations = async (req, res) => {
   }
 }
 
+const getConversationById = async (req, res) => {
+  try {
+    const conversation = await conversationService.getConversationById(req.params.conversationId);
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Conversation not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: conversation
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+}
+
 module.exports = {
   createConversation,
   getConversationByRequestId,
-  getMyConversations
+  getMyConversations,
+  getConversationById
 };
