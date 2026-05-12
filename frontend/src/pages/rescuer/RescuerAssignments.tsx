@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'; // giả sử có UI shadcn
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
 import { AssignmentCard } from '../../components/rescuer/AssignmentCard';
 import { fetchAllRequests, fetchMyAssignments, getConversationByRequest } from '../../services/rescuerApi';
-import { RequestDetailModal } from '../../components/rescuer/RequestDetailModal';
+import { RequestDetail } from '../../components/rescuer/RequestDetail'; // Đổi tên import
 import { useNavigate } from 'react-router-dom';
 
 export default function RescuerAssignments() {
@@ -46,7 +46,7 @@ export default function RescuerAssignments() {
     try {
       const convRes = await getConversationByRequest(requestId);
       if (convRes.data.success) {
-        navigate(`/rescuer/chat/${convRes.data.data.id}`);
+        navigate(`/rescuer/conversations/${convRes.data.data.id}`);
       } else {
         alert('Không thể mở hội thoại');
       }
@@ -82,9 +82,21 @@ export default function RescuerAssignments() {
                   <div className="text-sm text-gray-500 mt-1 line-clamp-2">{req.description || 'Không có mô tả'}</div>
                   <div className="text-xs text-gray-400 mt-2">Địa chỉ: {req.address}</div>
                   <div className="flex justify-between items-center mt-3">
-                    <span className={`px-2 py-1 rounded-full text-xs ${req.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
-                      {req.status === 'pending' ? 'Chưa nhận' : 'Đã nhận'}
-                    </span>
+                    
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                        req.status === 'pending' 
+                          ? 'bg-yellow-100 text-yellow-700' 
+                          : req.status === 'assigned' 
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {req.status === 'pending' 
+                          ? 'Chưa nhận' 
+                          : req.status === 'assigned' 
+                          ? 'Đã nhận'
+                          : 'Hoàn thành'}
+                      </span>
+
                     <button onClick={() => handleViewDetail(req.id)} className="text-blue-600 text-sm hover:underline">Chi tiết</button>
                   </div>
                 </div>
@@ -113,7 +125,16 @@ export default function RescuerAssignments() {
         </TabsContent>
       </Tabs>
 
-      <RequestDetailModal requestId={selectedRequestId} onClose={() => setSelectedRequestId(null)} onAccept={() => { loadMyAssignments(); loadAllRequests(); }} />
+      {/* Chỉ hiển thị modal khi có requestId */}
+      {selectedRequestId !== null && (
+        <RequestDetail 
+          requestId={selectedRequestId} 
+          onClose={() => {
+            console.log("Closing modal"); // THÊM LOG
+            setSelectedRequestId(null);
+          }} 
+        />
+      )}
     </div>
   );
 }
