@@ -36,7 +36,7 @@ export default function RescureLayout() {
           </Link>
 
           <Link 
-            to="/rescuer/messages" 
+            to="/rescuer/conversations" 
             className="flex items-center gap-3 px-4 py-3 bg-red-600 rounded-lg text-white font-medium shadow-md shadow-red-900/20 hover:bg-red-700 transition"
           >
             <MessageSquare size={20} />

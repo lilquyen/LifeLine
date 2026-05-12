@@ -58,8 +58,10 @@ const getMyConversations = async (userId) => {
     SELECT
       c.id,
       c.request_id,
+      r.title AS request_title,
 
       u.id AS other_user_id,
+      u.phone AS other_user_phone,
       u.full_name AS other_user_name,
       u.avatar_url AS other_user_avatar,
 
@@ -95,6 +97,9 @@ const getMyConversations = async (userId) => {
     LEFT JOIN messages mu
       ON mu.conversation_id = c.id
 
+    LEFT JOIN rescue_requests r
+      ON r.id = c.request_id  
+
     WHERE c.victim_id = $3
        OR c.rescuer_id = $4
 
@@ -104,7 +109,10 @@ const getMyConversations = async (userId) => {
       u.id,
       u.full_name,
       lm.content,
-      lm.sent_at
+      lm.sent_at,
+	    r.title,
+      u.phone,
+      u.avatar_url
 
     ORDER BY lm.sent_at DESC
     `,

@@ -6,7 +6,10 @@ const sentMessage = async (data) => {
 
     getIo().to(`conversation_${data.conversationId}`).emit('new_message', message);
 
-    return message;
+    return {
+        ...message,
+        image_urls: []
+    };
 }
 
 const getMessage = async (conversationId) => {
@@ -23,7 +26,22 @@ const markRead = async (conversationId, userId) => {
     return updatedCount;
 }
 
+const sendImageMessage = async (data) => {
+    const message = await messageRepo.insertImageMessage(data);
+
+    await messageRepo.insertMessageImages(message.id, data.content);
+
+    getIo().to(`conversation_${data.conversationId}`).emit('new_message', message);
+
+    return {
+        ...message,
+        image_urls: data.content
+    }
+}
+
 module.exports = {
     sentMessage,
-    getMessage
+    getMessage, 
+    markRead,
+    sendImageMessage
 }

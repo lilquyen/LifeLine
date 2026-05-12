@@ -10,6 +10,8 @@ import MyPostsPage from './pages/victim/MyPostsPage';
 import RescureLayout from './pages/rescuer/RescureLayout';
 import RescuerDashboard from './pages/rescuer/RescuerDashboard';
 
+import ConversationsPage from './pages/chat/MessagePage';
+
 import TestUI from './pages/TestUI';
 
 const VictimDashboardTemp = () => (
@@ -38,6 +40,7 @@ function App() {
           <Route path="dashboard" element={<VictimDashboardTemp />} />
           <Route path="create-request" element={<CreateRequest />} />
           <Route path="my-posts" element={<MyPostsPage />} />
+          <Route path="conversations" element={<ConversationsPage />} />
         </Route>
 
         {}
@@ -51,6 +54,7 @@ function App() {
         >
           {}
           <Route path="dashboard" element={<RescuerDashboard />} />
+          <Route path="conversations" element={<ConversationsPage />} />
         </Route>
 
         {}

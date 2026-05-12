@@ -1,4 +1,5 @@
 const messageService = require('./message.service');
+const imageService = require('../../common/services/uploadImage.service');
 
 const getMessage = async (req, res) => {
     try {
@@ -26,6 +27,22 @@ const sentTextMessage = async (req, res) => {
     }
 }
 
+const sentImageMessage = async (req, res) => {
+    try {
+        const imageUrls = await imageService.uploadImages(req.files);
+        const message = await messageService.sendImageMessage({
+            conversationId: req.params.conversationId,
+            senderId: req.user.id,
+            content: imageUrls
+        });
+        res.status(201).json(message);
+        console.log('Image message sent:', message);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+}
+
 const markRead = async (req, res) => {
     try {
         const updatedCount = await messageService.markRead(req.params.conversationId, req.user.id);
@@ -39,5 +56,6 @@ const markRead = async (req, res) => {
 module.exports = {
     getMessage,
     sentTextMessage,
-    markRead
+    markRead,
+    sentImageMessage
 }

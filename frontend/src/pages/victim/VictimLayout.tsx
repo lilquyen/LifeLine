@@ -12,55 +12,67 @@ export default function VictimLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white border-b px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl"></span>
-          <span className="font-bold text-red-600 text-xl">LifeLine</span>
-        </div>
+    <div className="flex flex-col h-screen overflow-hidden">
+      {/* Header của Victim */}
+      <header className="h-16 flex-none bg-white border-b">
+        <div className="px-6 py-4 flex items-center justify-between h-full">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🚑</span>
+            <span className="font-bold text-red-600 text-xl">LifeLine</span>
+          </div>
 
-        <div className="flex items-center gap-6">
-          <NavLink
-            to="/victim/dashboard"
-            className={({ isActive }) =>
-              `text-sm font-medium ${isActive ? 'text-red-600' : 'text-gray-600 hover:text-red-600'}`
-            }
-          >
-            Trang chủ
-          </NavLink>
-          <NavLink
-            to="/victim/create-request"
-            className={({ isActive }) =>
-              `text-sm font-medium ${isActive ? 'text-red-600' : 'text-gray-600 hover:text-red-600'}`
-            }
-          >
-            Tạo yêu cầu
-          </NavLink>
-          <NavLink
-            to="/victim/my-posts"
-            className={({ isActive }) =>
-              `text-sm font-medium ${isActive ? 'text-red-600' : 'text-gray-600 hover:text-red-600'}`
-            }
-          >
-            Yêu cầu của tôi
-          </NavLink>
-        </div>
+          <div className="flex items-center gap-6">
+            <NavLink
+              to="/victim/dashboard"
+              className={({ isActive }) =>
+                `text-sm font-medium ${isActive ? 'text-red-600' : 'text-gray-600 hover:text-red-600'}`
+              }
+            >
+              Trang chủ
+            </NavLink>
+            <NavLink
+              to="/victim/create-request"
+              className={({ isActive }) =>
+                `text-sm font-medium ${isActive ? 'text-red-600' : 'text-gray-600 hover:text-red-600'}`
+              }
+            >
+              Tạo yêu cầu
+            </NavLink>
+            <NavLink
+              to="/victim/my-posts"
+              className={({ isActive }) =>
+                `text-sm font-medium ${isActive ? 'text-red-600' : 'text-gray-600 hover:text-red-600'}`
+              }
+            >
+              Yêu cầu của tôi
+            </NavLink>
+            <NavLink
+              to="/victim/conversations"
+              className={({ isActive }) =>
+                `text-sm font-medium ${isActive ? 'text-red-600' : 'text-gray-600 hover:text-red-600'}`
+              }
+            >
+              Nhắn tin
+            </NavLink>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-600">👤 {user?.full_name}</span>
-          <button
-            onClick={handleLogout}
-            className="text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
-          >
-            Đăng xuất
-          </button>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-600">👤 {user?.full_name}</span>
+            <button
+              onClick={handleLogout}
+              className="text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Đăng xuất
+            </button>
+          </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Content */}
-      <main className="p-6">
-        <Outlet />
+      {/* Main content với flex-1 và overflow-hidden */}
+      <main className="flex-1 overflow-hidden relative">
+        <div className="h-full overflow-auto">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
