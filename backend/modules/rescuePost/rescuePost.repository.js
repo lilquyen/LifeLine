@@ -177,10 +177,11 @@ const getAllPendingPosts = async (filters = {}) => {
 
 const getVictimDashboard = async (userId) => {
     const posts = await getAllPostByUserId(userId);
-    const latestActive = await db.query(`
+    const acceptedRequests = await db.query(`
         SELECT
             rr.id,
             rr.title,
+            rr.description,
             rr.status,
             rr.urgency_level,
             rr.address,
@@ -208,10 +209,11 @@ const getVictimDashboard = async (userId) => {
         LEFT JOIN rescue_assignments ra ON ra.request_id = rr.id
         LEFT JOIN users u ON u.id = ra.rescuer_id
         WHERE rr.user_id = $1
+          AND rr.status IN ('assigned', 'in_progress', 'completed')
+          AND ra.rescuer_id IS NOT NULL
         ORDER BY
             CASE WHEN rr.status IN ('assigned', 'in_progress') THEN 0 ELSE 1 END,
             rr.created_at DESC
-        LIMIT 1
     `, [userId]);
 
     return {
@@ -221,7 +223,8 @@ const getVictimDashboard = async (userId) => {
             active: posts.filter(post => ['assigned', 'in_progress'].includes(post.status)).length,
             completed: posts.filter(post => post.status === 'completed').length
         },
-        latestStatus: latestActive.rows[0] || null,
+        latestStatus: acceptedRequests.rows[0] || posts[0] || null,
+        acceptedRequests: acceptedRequests.rows,
         recentRequests: posts.slice(0, 5)
     };
 };

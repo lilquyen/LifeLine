@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, Clock, MapPin, MessageSquare, Navigation, PhoneCall, Plus, Radio, Siren, UserRound } from 'lucide-react';
-import { MapContainer, Marker, Polyline, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, CheckCircle2, Clock, Loader2, MapPin, MessageSquare, Navigation, PhoneCall, Plus, Radio, Siren, UserRound } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import api from '../../services/api';
 import { connectSocket } from '../../services/socket';
+import { RescuerTrackingMap } from '../../components/rescuer/RescuerTrackingMap';
 
 interface RescuePost {
   id: number;
@@ -44,62 +44,62 @@ const estimateDistanceKm = (a?: any, b?: any) => {
   return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 };
 
-const markerIcon = (label: string, color: string) => L.divIcon({
-  className: 'victim-tracker-marker',
-  html: `<div style="width:34px;height:34px;border-radius:999px;background:${color};color:white;border:3px solid white;box-shadow:0 8px 20px rgba(15,23,42,.25);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;">${label}</div>`,
-  iconSize: [34, 34],
-  iconAnchor: [17, 17],
-});
-
-function FitTrackerMap({ victim, rescuer }: { victim: any; rescuer: any }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (victim && rescuer) {
-      map.fitBounds([[Number(victim.lat), Number(victim.lng)], [Number(rescuer.lat), Number(rescuer.lng)]], {
-        padding: [42, 42],
-        maxZoom: 15,
-      });
-    } else if (victim) {
-      map.setView([Number(victim.lat), Number(victim.lng)], 14);
-    }
-  }, [map, victim, rescuer]);
-
-  return null;
-}
-
 export default function VictimDashboard() {
   const [posts, setPosts] = useState<RescuePost[]>([]);
+  const [acceptedRequests, setAcceptedRequests] = useState<any[]>([]);
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [dashboardCounts, setDashboardCounts] = useState<any>(null);
   const [latestStatus, setLatestStatus] = useState<any>(null);
   const [rescuerLocation, setRescuerLocation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [sendingSos, setSendingSos] = useState(false);
   const navigate = useNavigate();
+  const [updatingVictimLocation, setUpdatingVictimLocation] = useState(false);
+
+  const fetchDashboard = useCallback(async (preferredRequestId?: number | null) => {
+    const res = await api.get('/rescue-posts/victim-dashboard');
+    const data = res.data.data;
+    const accepted = data.acceptedRequests;
+    const selected = preferredRequestId
+      ? accepted.find((request: any) => request.id === preferredRequestId)
+      : accepted[0];
+
+    setPosts(data.recentRequests );
+    setAcceptedRequests(accepted);
+    setDashboardCounts(data.counts);
+    setLatestStatus(selected);
+    setSelectedRequestId(selected?.id);
+
+    if (selected?.rescuer_lat && selected?.rescuer_lng) {
+      setRescuerLocation({ lat: selected.rescuer_lat, lng: selected.rescuer_lng });
+    } else if (selected?.id && ['assigned', 'in_progress'].includes(selected.status)) {
+      const latestLocation = await api.get(`/locations/latest/${selected.id}`).catch(() => null);
+      setRescuerLocation(latestLocation?.data?.lat && latestLocation?.data?.lng ? latestLocation.data : null);
+    } else {
+      setRescuerLocation(null);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const res = await api.get('/rescue-posts/victim-dashboard');
-        const data = res.data.data;
-        setPosts(data.recentRequests || []);
-        setDashboardCounts(data.counts || null);
-        setLatestStatus(data.latestStatus || null);
-        if (data.latestStatus?.rescuer_lat && data.latestStatus?.rescuer_lng) {
-          setRescuerLocation({ lat: data.latestStatus.rescuer_lat, lng: data.latestStatus.rescuer_lng });
-        } else if (data.latestStatus?.id && ['assigned', 'in_progress'].includes(data.latestStatus.status)) {
-          const latestLocation = await api.get(`/locations/latest/${data.latestStatus.id}`).catch(() => null);
-          if (latestLocation?.data?.lat && latestLocation?.data?.lng) {
-            setRescuerLocation(latestLocation.data);
-          }
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchDashboard(null)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [fetchDashboard]);
 
-    fetchPosts().catch(console.error);
-  }, []);
+  useEffect(() => {
+    if (!selectedRequestId) return;
+    const selected = acceptedRequests.find(request => request.id === selectedRequestId);
+    if (!selected) return;
+
+    setLatestStatus(selected);
+    if (selected.rescuer_lat && selected.rescuer_lng) {
+      setRescuerLocation({ lat: selected.rescuer_lat, lng: selected.rescuer_lng });
+    } else {
+      api.get(`/locations/latest/${selected.id}`)
+        .then(res => setRescuerLocation(res.data?.lat && res.data?.lng ? res.data : null))
+        .catch(() => setRescuerLocation(null));
+    }
+  }, [acceptedRequests, selectedRequestId]);
 
   useEffect(() => {
     if (!latestStatus?.id) return;
@@ -135,6 +135,7 @@ export default function VictimDashboard() {
         setDashboardCounts(res.data.data.counts);
         setLatestStatus(res.data.data.latestStatus);
 
+        await fetchDashboard(selectedRequestId);
       } catch (error) {
         console.error(error); 
         alert('Gửi SOS thất bại');
@@ -153,8 +154,34 @@ export default function VictimDashboard() {
       rating: 5,
       feedback: 'Đã được hỗ trợ'
     });
-    const res = await api.get('/rescue-posts/victim-dashboard');
-    setLatestStatus(res.data.data.latestStatus || null);
+    await fetchDashboard(latestStatus.id);
+  };
+
+  const updateVictimLocation = () => {
+    if (!latestStatus?.id) return;
+    if (!navigator.geolocation) {
+      alert('Trinh duyet khong ho tro GPS');
+      return;
+    }
+
+    setUpdatingVictimLocation(true);
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        await api.put(`/rescue-posts/update/${latestStatus.id}`, {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+        await fetchDashboard(latestStatus.id);
+      } catch (error) {
+        console.error(error);
+        alert('Cap nhat vi tri that bai');
+      } finally {
+        setUpdatingVictimLocation(false);
+      }
+    }, () => {
+      setUpdatingVictimLocation(false);
+      alert('Khong lay duoc GPS');
+    });
   };
 
   const stats = useMemo(() => {
@@ -165,14 +192,15 @@ export default function VictimDashboard() {
       active: posts.filter(post => ['assigned', 'in_progress'].includes(post.status)).length,
       completed: posts.filter(post => post.status === 'completed').length,
     };
-  }, [posts]);
+  }, [dashboardCounts, posts]);
 
-  const latestPosts = posts.slice(0, 5);
+  const acceptedDisplay = acceptedRequests.slice(0, 5);
   const criticalPost = posts.find(post => post.status !== 'completed' && post.urgency_level >= 4);
   const activeTracking = latestStatus && ['assigned', 'in_progress'].includes(latestStatus.status);
   const victimPoint = latestStatus?.lat && latestStatus?.lng ? { lat: latestStatus.lat, lng: latestStatus.lng } : null;
   const distanceKm = estimateDistanceKm(rescuerLocation, latestStatus);
-  const etaMinutes = distanceKm ? Math.max(1, Math.round((distanceKm / 25) * 60)) : null;
+  const etaMinutes = distanceKm != null ? Math.max(1, Math.round((distanceKm / 25) * 60)) : null;
+  const distanceText = distanceKm != null ? `${Number(distanceKm).toFixed(1)} km` : null;
 
   return (
     <div className="min-h-full bg-slate-50 p-6">
@@ -299,34 +327,28 @@ export default function VictimDashboard() {
                   Xác nhận đã được hỗ trợ
                 </button>
               )}
+
+              {latestStatus && (
+                <button
+                  type="button"
+                  onClick={updateVictimLocation}
+                  disabled={updatingVictimLocation}
+                  className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold text-sm hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {updatingVictimLocation ? <Loader2 size={18} className="animate-spin" /> : <MapPin size={18} />}
+                  {updatingVictimLocation ? 'Dang cap nhat vi tri...' : 'Cap nhat vi tri cua toi'}
+                </button>
+              )}
             </div>
 
             <div className="min-h-[320px] border-t lg:border-t-0 lg:border-l border-slate-200">
               {victimPoint ? (
-                <MapContainer
-                  center={[Number(victimPoint.lat), Number(victimPoint.lng)]}
-                  zoom={14}
-                  style={{ height: '100%', minHeight: 320, width: '100%', zIndex: 1 }}
-                >
-                  <TileLayer
-                    attribution='&copy; OpenStreetMap contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <FitTrackerMap victim={victimPoint} rescuer={rescuerLocation} />
-                  <Marker position={[Number(victimPoint.lat), Number(victimPoint.lng)]} icon={markerIcon('BAN', '#dc2626')} />
-                  {rescuerLocation && (
-                    <>
-                      <Marker position={[Number(rescuerLocation.lat), Number(rescuerLocation.lng)]} icon={markerIcon('R', '#2563eb')} />
-                      <Polyline
-                        positions={[
-                          [Number(victimPoint.lat), Number(victimPoint.lng)],
-                          [Number(rescuerLocation.lat), Number(rescuerLocation.lng)],
-                        ]}
-                        pathOptions={{ color: '#2563eb', weight: 4, dashArray: '8 8' }}
-                      />
-                    </>
-                  )}
-                </MapContainer>
+                <RescuerTrackingMap
+                  victim={victimPoint}
+                  rescuer={rescuerLocation}
+                  victimLabel="BAN"
+                  rescuerLabel="R"
+                />
               ) : (
                 <div className="h-full min-h-[320px] flex items-center justify-center text-sm text-slate-500">
                   Chưa có toạ độ ca cứu hộ
@@ -351,16 +373,17 @@ export default function VictimDashboard() {
             <div className="divide-y">
               {loading ? (
                 <div className="p-6 text-center text-slate-500">Đang tải dữ liệu</div>
-              ) : latestPosts.length === 0 ? (
+              ) : posts.length === 0 ? (
                 <div className="p-8 text-center text-slate-500">
                   Bạn chưa có yêu cầu nào. Hãy tạo yêu cầu nếu bạn cần hỗ trợ
                 </div>
               ) : (
-                latestPosts.map(post => (
-                  <Link
+                acceptedDisplay.map(post => (
+                  <button
                     key={post.id}
-                    to="/victim/my-posts"
-                    className="block p-5 hover:bg-slate-50 transition"
+                    type="button"
+                    onClick={() => setSelectedRequestId(post.id)}
+                    className={`block w-full p-5 text-left transition ${selectedRequestId === post.id ? 'bg-red-50' : 'hover:bg-slate-50'}`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
@@ -373,13 +396,13 @@ export default function VictimDashboard() {
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusStyles[post.status]}`}>
-                          {statusLabels[post.status]}
+                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusStyles[post.status as RescuePost['status']] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                          {statusLabels[post.status as RescuePost['status']] || post.status}
                         </span>
                         <span className="text-xs text-slate-500">Mức {post.urgency_level}</span>
                       </div>
                     </div>
-                  </Link>
+                  </button>
                 ))
               )}
             </div>
