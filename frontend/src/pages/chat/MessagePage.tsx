@@ -3,6 +3,7 @@ import api from '../../services/api';
 import ConversationList from '../../components/chat/ConversationList';
 import ChatWindow from '../../components/chat/ChatWindow';
 import { ref } from 'process';
+import { useParams } from 'react-router-dom';
 
 // Khai báo Interface để khớp với dữ liệu từ Backend
 interface Conversation {
@@ -19,6 +20,7 @@ interface Conversation {
 }
 
 const MessagesPage = () => {
+  const { conversationId } = useParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedAvatar, setSelectedAvatar] = useState<string>('');
@@ -47,6 +49,20 @@ const MessagesPage = () => {
   useEffect(() => {
     fetchConversations();
   }, [refreshKey]); 
+
+  useEffect(() => {
+    if (conversationId && conversations.length > 0) {
+      const id = parseInt(conversationId);
+      const conversation = conversations.find(conv => conv.id === id);
+      
+      if (conversation) {
+        setSelectedId(id);
+        setSelectedAvatar(conversation.other_user_avatar || '');
+        setConversationTitle(conversation.other_user_name + " [" + conversation.request_title + "]");
+        setSelectedPhone(conversation.other_user_phone || '');
+      }
+    }
+  }, [conversationId, conversations]);
 
   const handleSelectConversation = async (id: number) => {
     setSelectedId(id);

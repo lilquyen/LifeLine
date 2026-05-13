@@ -10,22 +10,16 @@ const createConversation = async (data) => {
       throw new Error('Missing required fields');
     }
 
-    const existingConversation =
-      await conversationRepository.getConversationByRequestId(
-        data.requestId
-      );
+    const existingConversationId = await conversationRepository.isConversationExistsByRequestIdRescuerId(
+      data.requestId,
+      data.rescuerId
+    );
 
-    // Nếu đã có conversation active
-    // thì inactive conversation cũ
-    if (existingConversation) {
-      await conversationRepository.inactiveConversation(
-        existingConversation.id
-      );
+    if (existingConversationId) {
+      return await conversationRepository.getConversationById(existingConversationId);
     }
-
-    // Tạo conversation mới
-    const newConversation =
-      await conversationRepository.createConversation(data);
+    
+    const newConversation = await conversationRepository.createConversation(data);
 
     console.log('New conversation created:', newConversation);
 
@@ -61,9 +55,14 @@ const getConversationById = async (conversationId) => {
   return await conversationRepository.getConversationById(conversationId);
 }
 
+const isConversationExistsByRequestIdRescuerId = async (requestId, rescuerId) => {
+  return await conversationRepository.isConversationExistsByRequestIdRescuerId(requestId, rescuerId);
+}
+
 module.exports = {
   createConversation,
   getConversationByRequestId,
   getMyConversations,
-  getConversationById
+  getConversationById,
+  isConversationExistsByRequestIdRescuerId
 };

@@ -46,7 +46,7 @@ export default function RescuerAssignments() {
     try {
       const convRes = await getConversationByRequest(requestId);
       if (convRes.data.success) {
-        navigate(`/rescuer/chat/${convRes.data.data.id}`);
+        navigate(`/rescuer/conversations/${convRes.data.data.id}`);
       } else {
         alert('Không thể mở hội thoại');
       }
@@ -106,6 +106,10 @@ export default function RescuerAssignments() {
                   assignment={assign}
                   onMessage={handleMessage}
                   onViewDetail={handleViewDetail}
+                  onAssignmentUpdate={() => {
+                    loadMyAssignments();
+                    loadAllRequests();
+                  }}
                 />
               ))
             )}
