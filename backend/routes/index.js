@@ -10,5 +10,6 @@ router.use('/conversations', require('../modules/conversation/conversation.route
 router.use('/rescuer/conversations', require('../modules/conversation/rescuer_conversation.routes'));
 router.use('/victim/conversations', require('../modules/conversation/victim_conversation.routes'));
 router.use('/notifications', require('../modules/notification/notification.routes'));
+router.use('/stats', require('../modules/stat/stat.routes'));
 
 module.exports = router;

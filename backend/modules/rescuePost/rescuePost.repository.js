@@ -252,26 +252,7 @@ const getNearestRescuers = async (requestId) => {
 };
 
 const getAdminStats = async () => {
-    const [byDay, byUrgency, byStatus, totals] = await Promise.all([
-        db.query(`
-            SELECT created_at::date AS day, COUNT(*)::int AS total
-            FROM rescue_requests
-            GROUP BY created_at::date
-            ORDER BY day DESC
-            LIMIT 14
-        `),
-        db.query(`
-            SELECT urgency_level, COUNT(*)::int AS total
-            FROM rescue_requests
-            GROUP BY urgency_level
-            ORDER BY urgency_level
-        `),
-        db.query(`
-            SELECT status, COUNT(*)::int AS total
-            FROM rescue_requests
-            GROUP BY status
-            ORDER BY status
-        `),
+    const  [totals] = await Promise.all([
         db.query(`
             SELECT
                 COUNT(*)::int AS total_requests,
@@ -287,9 +268,6 @@ const getAdminStats = async () => {
     ]);
 
     return {
-        byDay: byDay.rows,
-        byUrgency: byUrgency.rows,
-        byStatus: byStatus.rows,
         totals: totals.rows[0]
     };
 
