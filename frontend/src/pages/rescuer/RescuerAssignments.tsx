@@ -118,6 +118,10 @@ export default function RescuerAssignments() {
                   assignment={assign}
                   onMessage={handleMessage}
                   onViewDetail={handleViewDetail}
+                  onAssignmentUpdate={() => {
+                    loadMyAssignments();
+                    loadAllRequests();
+                  }}
                 />
               ))
             )}

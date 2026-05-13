@@ -6,9 +6,14 @@ const createConversation = async (req, res) => {
   try {
     const rescure_id = req.user.id;
     const request_id = req.params.postId;
-    const victim_id = rescuePostService.getVictimByPostId(request_id);
+    const victim_id = await rescuePostService.getVictimByPostId(request_id);
 
-    const conversation = await conversationService.createConversation(rescure_id, victim_id, request_id);
+    const existingConversationId = await conversationService.isConversationExistsByRequestIdRescuerId(rescure_id, request_id);
+    if (existingConversationId) {
+      conversation = await conversationService.getConversationById(existingConversationId);
+    } else {
+      conversation = await conversationService.createConversation(rescure_id, victim_id, request_id);
+    }
 
     res.status(201).json({
       success: true,

@@ -27,9 +27,15 @@ export const getConversationByRequest = (requestId: number) => API.get(`/convers
 // Cập nhật vị trí của rescuer
 export const updateLocation = (lat: number, lng: number) => API.put('/auth/update-location', { latitude: lat, longitude: lng });
 
+export const updateLocationHistory = (requestId: number, lat: number, lng: number) => 
+  API.post('/locations/add', { requestId, lat, lng });
+
 // Lấy tất cả các bài đăng (cho tab Tất cả)
 export const fetchAllRequests = () => API.get('/rescue-posts');
 
 // Hủy ca cứu (gửi tin nhắn hủy)
 export const cancelAssignment = (conversationId: number, content: string) => 
   API.post(`/chat/messages/cancel/${conversationId}`, { content });
+
+export const failAssignment = (postId: number) => 
+  API.post(`/assignments/fail/${postId}`);
