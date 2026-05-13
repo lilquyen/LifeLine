@@ -91,6 +91,18 @@ const getAdminStats = async () => {
     return rescuePostRepo.getAdminStats();
 }
 
+const cancelRescueRequest = async (userId, requestId) => {
+    return rescuePostRepo.cancelRescueRequest(userId, requestId);
+}
+
+const updateRescueRequest = async (requestId, data) => {
+    return rescuePostRepo.updateRescueRequest(requestId, data);
+}
+
+const completeRescueRequest = async (userId, requestId) => {
+    return rescuePostRepo.completeRescueRequest(userId, requestId);
+}
+
 module.exports = {
     createPost,
     getAllPosts,
@@ -100,5 +112,8 @@ module.exports = {
     getAllPendingPosts,
     getVictimDashboard,
     getNearestRescuers,
-    getAdminStats
+    getAdminStats,
+    cancelRescueRequest,
+    updateRescueRequest,
+    completeRescueRequest
 }

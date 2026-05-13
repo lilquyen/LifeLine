@@ -291,6 +291,106 @@ const getAdminStats = async () => {
         byStatus: byStatus.rows,
         totals: totals.rows[0]
     };
+
+}
+const cancelRescueRequest = async (userId, requestId) => {
+    const client = await db.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        // Update rescue_requests
+        const requestResult = await client.query(`
+            UPDATE rescue_requests
+            SET status = 'cancelled', updated_at = NOW()
+            WHERE id = $1
+            AND user_id = $2
+            RETURNING *
+        `, [requestId, userId]);
+
+        // Update rescue_assignments
+        const assignmentResult = await client.query(`
+            UPDATE rescue_assignments
+            SET status = 'cancelled', finished_at = NOW()
+            WHERE request_id = $1
+            RETURNING *
+        `, [requestId]);
+
+        await client.query('COMMIT');
+
+        return {
+            request: requestResult.rows[0],
+            assignments: assignmentResult.rows
+        };
+        
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
+    }
+};
+
+const updateRescueRequest = async (requestId, data) => {
+    const fields = [];
+    const values = [];
+    let idx = 1;
+
+    for (const key in data) {
+        fields.push(`${key} = $${idx}`);
+        values.push(data[key]);
+        idx++;
+    }
+
+    values.push(requestId);
+
+    const query = `
+        UPDATE rescue_requests
+        SET ${fields.join(', ')}, updated_at = NOW()
+        WHERE id = $${idx}
+        RETURNING *
+    `;
+
+    const result = await db.query(query, values);
+    return result.rows[0];
+}
+
+const completeRescueRequest = async (userId, requestId) => {
+    const client = await db.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        // Update rescue_requests
+        const requestResult = await client.query(`
+            UPDATE rescue_requests
+            SET status = 'completed', updated_at = NOW()
+            WHERE id = $1
+            AND user_id = $2
+            RETURNING *
+        `, [requestId, userId]);
+
+        // Update rescue_assignments
+        const assignmentResult = await client.query(`
+            UPDATE rescue_assignments
+            SET status = 'completed', finished_at = NOW()
+            WHERE request_id = $1
+            RETURNING *
+        `, [requestId]);
+
+        await client.query('COMMIT');
+
+        return {
+            request: requestResult.rows[0],
+            assignments: assignmentResult.rows
+        };
+        
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
+    }
 };
 
 module.exports = {
@@ -302,5 +402,8 @@ module.exports = {
     getAllPendingPosts,
     getVictimDashboard,
     getNearestRescuers,
-    getAdminStats
+    getAdminStats,
+    cancelRescueRequest,
+    updateRescueRequest,
+    completeRescueRequest
 }

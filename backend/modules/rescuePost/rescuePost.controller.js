@@ -121,7 +121,121 @@ const getAdminStats = async (req, res) => {
     }
 }
 
+const cancelRescueRequest = async (req, res) => {
+    try {
+        const postId = req.params.id;
+        const userId = req.user.id;
+        const post_userId = await service.getVictimByPostId(postId);
 
+        if (post_userId !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'You are not authorized to cancel this rescue request'
+            });
+        }
+
+        const result = await service.cancelRescueRequest(userId, postId);
+
+        res.json({
+            success: true,
+            message: 'Rescue request cancelled successfully',
+            data: result
+        });
+    } catch (err) {
+        console.log(err);
+
+        res.status(400).json({
+            success: false,
+            message: err.message
+        });
+    }
+}
+
+const completeRescueRequest = async (req, res) => {
+    try {
+        const postId = req.params.id;
+        const userId = req.user.id;
+        const post_userId = await service.getVictimByPostId(postId);
+
+        if (post_userId !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'You are not authorized to complete this rescue request'
+            });
+        }
+
+        const result = await service.completeRescueRequest(userId, postId);
+
+        res.json({
+            success: true,
+            message: 'Rescue request cancelled successfully',
+            data: result
+        });
+    } catch (err) {
+        console.log(err);
+
+        res.status(400).json({
+            success: false,
+            message: err.message
+        });
+    }
+}
+
+const updateRescueRequest = async (req, res) => {
+    try {
+        const postId = req.params.id;
+        const userId = req.user.id;
+
+        // 1. Kiểm tra quyền sở hữu (Owner check)
+        const post_userId = await service.getVictimByPostId(postId);
+        if (post_userId !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Bạn không có quyền cập nhật yêu cầu cứu hộ này.'
+            });
+        }
+        
+        // 2. Danh sách các trường được phép cập nhật trực tiếp
+        const allowedFields = ['title', 'description', 'urgency_level', 'address', 'status'];
+        const updateData = {};
+
+        // Lọc các trường thông thường
+        for (const key of allowedFields) {
+            if (req.body[key] !== undefined && req.body[key] !== '') {
+                updateData[key] = req.body[key];
+            }
+        }
+
+        // 3. Xử lý logic Vị trí (Latitude & Longitude)
+        // Lưu ý: Trong PostGIS, định dạng POINT là (Kinh độ/Lng - Vĩ độ/Lat)
+        if (req.body.lat && req.body.lng) {
+            updateData.location = `POINT(${req.body.lng} ${req.body.lat})`;
+        }
+
+        // 4. Kiểm tra xem có dữ liệu nào để cập nhật không
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng cung cấp ít nhất một thông tin để cập nhật.'
+            });
+        }
+
+        // 5. Gọi service để thực thi
+        const result = await service.updateRescueRequest(postId, updateData);
+
+        res.json({
+            success: true,
+            message: 'Cập nhật yêu cầu cứu hộ thành công',
+            data: result
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(400).json({
+            success: false,
+            message: err.message
+        });
+    }
+}
 
 module.exports = {
     createPost,
@@ -131,5 +245,8 @@ module.exports = {
     getAllPendingPosts,
     getVictimDashboard,
     getNearestRescuers,
-    getAdminStats
+    getAdminStats,
+    cancelRescueRequest,
+    updateRescueRequest,
+    completeRescueRequest
 }

@@ -15,6 +15,9 @@ router.post('/post',
 router.get('/pending', controller.getAllPendingPosts);
 router.get('/victim-dashboard', auth, role(['victim']), controller.getVictimDashboard);
 router.get('/admin/stats', auth, role(['admin']), controller.getAdminStats);
+router.put('/cancel/:id', auth, role(['victim']) , controller.cancelRescueRequest);
+router.put('/complete/:id', auth, role(['victim']), controller.completeRescueRequest);
+router.put('/update/:id', auth, role(['victim']), controller.updateRescueRequest);
 router.get('/', controller.getAllPosts);
 router.get('/my-posts', auth, controller.getAllPostByUserId);
 router.get('/:id/nearest-rescuers', auth, controller.getNearestRescuers);
