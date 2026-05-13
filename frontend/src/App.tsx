@@ -39,6 +39,7 @@ function App() {
           <Route path="create-request" element={<CreateRequest />} />
           <Route path="my-posts" element={<MyPostsPage />} />
           <Route path="conversations" element={<ConversationsPage />} />
+          <Route path="conversations/:conversationId" element={<ConversationsPage />} />
         </Route>
 
         <Route

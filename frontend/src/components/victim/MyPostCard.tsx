@@ -1,4 +1,3 @@
-// src/components/victim/MyPostCard.tsx
 import React from 'react';
 
 interface RescuePost {

@@ -74,7 +74,7 @@ export default function NotificationBell() {
         type="button"
         onClick={() => setOpen(prev => !prev)}
         className="relative p-2 text-slate-500 hover:bg-slate-100 rounded-full transition"
-        aria-label="Thong bao"
+        aria-label="Thông báo"
       >
         <Bell size={22} />
         {unreadCount > 0 && (
@@ -88,8 +88,8 @@ export default function NotificationBell() {
         <div className="absolute right-0 mt-3 w-96 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded-lg shadow-xl z-[1200] overflow-hidden">
           <div className="px-4 py-3 border-b flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-slate-800">Thong bao</h3>
-              <p className="text-xs text-slate-500">{unreadCount} chua doc</p>
+              <h3 className="font-bold text-slate-800">Thông báo</h3>
+              <p className="text-xs text-slate-500">{unreadCount} chưa đọc</p>
             </div>
             <button
               type="button"
@@ -97,14 +97,14 @@ export default function NotificationBell() {
               className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
             >
               <CheckCheck size={15} />
-              Doc tat ca
+              Đọc tất cả
             </button>
           </div>
 
           <div className="max-h-96 overflow-y-auto">
             {items.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-slate-500">
-                Chua co thong bao nao
+                Chưa có thông báo nào
               </div>
             ) : (
               items.map(item => (

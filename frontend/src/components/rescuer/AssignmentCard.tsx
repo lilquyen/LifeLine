@@ -16,7 +16,7 @@ interface AssignmentCardProps {
   onMessage: (requestId: number) => void;
   onViewDetail: (requestId: number) => void;
   onViewLocation?: (requestId: number) => void;
-  onAssignmentUpdate?: () => void; // Callback để refresh danh sách sau khi cập nhật
+  onAssignmentUpdate?: () => void; 
 }
 
 export const AssignmentCard: React.FC<AssignmentCardProps> = ({ 
@@ -29,8 +29,6 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelMessage, setCancelMessage] = useState('');
   const [cancelling, setCancelling] = useState(false);
-  const [completeNote, setCompleteNote] = useState('');
-  const [completing, setCompleting] = useState(false);
 
   const statusColor = assignment.assignment_status === 'accepted' 
     ? 'text-green-600 bg-green-100' 
@@ -67,21 +65,6 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
       alert('Hủy ca thất bại');
     } finally {
       setCancelling(false);
-    }
-  };
-
-  const handleCompleteAssignment = async () => {
-    setCompleting(true);
-    try {
-      await completeAssignment(assignment.request_id, completeNote || 'Da ho tro xong');
-      alert('Da danh dau hoan tat');
-      setCompleteNote('');
-      onAssignmentUpdate?.();
-    } catch (error) {
-      console.error(error);
-      alert('Cap nhat hoan tat that bai');
-    } finally {
-      setCompleting(false);
     }
   };
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AlertTriangle, CheckCircle2, Clock, MapPin, MessageSquare, Navigation, PhoneCall, Plus, Radio, Siren, UserRound } from 'lucide-react';
 import { MapContainer, Marker, Polyline, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -18,11 +18,11 @@ interface RescuePost {
 }
 
 const statusLabels: Record<RescuePost['status'], string> = {
-  pending: 'Dang cho',
-  assigned: 'Da tiep nhan',
-  in_progress: 'Dang xu ly',
-  completed: 'Hoan tat',
-  cancelled: 'Da huy',
+  pending: 'Đang chờ',
+  assigned: 'Đã tiếp nhận',
+  in_progress: 'Đang xử lí',
+  completed: 'Hoàn tất',
+  cancelled: 'Đã huỷ',
 };
 
 const statusStyles: Record<RescuePost['status'], string> = {
@@ -75,6 +75,7 @@ export default function VictimDashboard() {
   const [rescuerLocation, setRescuerLocation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [sendingSos, setSendingSos] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -115,7 +116,7 @@ export default function VictimDashboard() {
 
   const sendQuickSos = (incidentType = 'SOS') => {
     if (!navigator.geolocation) {
-      alert('Trinh duyet khong ho tro GPS');
+      alert('Trình duyệt không hỗ trợ GPS');
       return;
     }
     setSendingSos(true);
@@ -123,25 +124,26 @@ export default function VictimDashboard() {
       try {
         const formData = new FormData();
         formData.append('title', `SOS - ${incidentType}`);
-        formData.append('description', 'Yeu cau khan cap tao nhanh, se bo sung mo ta sau.');
+        formData.append('description', 'Yêu cầu khẩn cấp');
         formData.append('urgency_level', '5');
-        formData.append('address', 'Vi tri GPS hien tai');
+        formData.append('address', 'Yêu cầu khẩn cấp, chưa có địa chỉ cụ thể. Lấy địa chỉ ở GPS');
         formData.append('lat', pos.coords.latitude.toString());
         formData.append('lng', pos.coords.longitude.toString());
         await api.post('/rescue-posts/post', formData);
         const res = await api.get('/rescue-posts/victim-dashboard');
-        setPosts(res.data.data.recentRequests || []);
-        setDashboardCounts(res.data.data.counts || null);
-        setLatestStatus(res.data.data.latestStatus || null);
+        setPosts(res.data.data.recentRequests);
+        setDashboardCounts(res.data.data.counts);
+        setLatestStatus(res.data.data.latestStatus);
+
       } catch (error) {
         console.error(error);
-        alert('Gui SOS that bai');
+        alert('Gửi SOS thất bại');
       } finally {
         setSendingSos(false);
       }
     }, () => {
       setSendingSos(false);
-      alert('Khong lay duoc GPS');
+      alert('Không lấy được GPS');
     });
   };
 
@@ -149,7 +151,7 @@ export default function VictimDashboard() {
     if (!latestStatus?.id) return;
     await api.post(`/assignments/confirm/${latestStatus.id}`, {
       rating: 5,
-      feedback: 'Da duoc ho tro'
+      feedback: 'Đã được hỗ trợ'
     });
     const res = await api.get('/rescue-posts/victim-dashboard');
     setLatestStatus(res.data.data.latestStatus || null);
@@ -177,36 +179,36 @@ export default function VictimDashboard() {
       <button
         type="button"
         disabled={sendingSos}
-        onClick={() => sendQuickSos('Khan cap')}
+        onClick={() => sendQuickSos('Khẩn Cấp')}
         className="fixed bottom-6 right-6 z-[1300] inline-flex h-16 min-w-16 items-center justify-center gap-2 rounded-full bg-red-700 px-5 text-white shadow-2xl shadow-red-300 hover:bg-red-800 disabled:opacity-60"
-        aria-label="Gui SOS khan cap"
+        aria-label="Gửi SOS khẩn cấp"
       >
         <Siren size={26} />
-        <span className="hidden sm:inline font-bold">{sendingSos ? 'Dang gui...' : 'SOS'}</span>
+        <span className="hidden sm:inline font-bold">{sendingSos ? 'Đang gửi' : 'SOS'}</span>
       </button>
 
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-red-600">LineLife</p>
-            <h1 className="text-2xl font-bold text-slate-900">Bang dieu khien cuu ho</h1>
-            <p className="text-sm text-slate-500 mt-1">Theo doi tinh trang cac yeu cau va tao SOS nhanh khi can.</p>
+            <h1 className="text-2xl font-bold text-slate-900">Trang chủ gửi yêu cầu cứu hộ</h1>
+            <p className="text-sm text-slate-500 mt-1">Theo dõi tình trạng các yêu cầu, gửi yêu cầu khẩn cấp</p>
           </div>
           <Link
             to="/victim/create-request"
             className="inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-3 rounded-lg"
           >
             <Plus size={18} />
-            Tao yeu cau moi
+            Tạo yêu cầu mới
           </Link>
           <button
             type="button"
             disabled={sendingSos}
-            onClick={() => sendQuickSos('Khan cap')}
+            onClick={() => sendQuickSos('Khẩn cấp')}
             className="inline-flex items-center justify-center gap-2 bg-red-700 hover:bg-red-800 text-white font-semibold px-4 py-3 rounded-lg disabled:opacity-60"
           >
             <Siren size={18} />
-            {sendingSos ? 'Dang gui SOS...' : 'SOS nhanh'}
+            {sendingSos ? 'Đang gửi SOS...' : 'SOS nhanh'}
           </button>
         </div>
 
@@ -215,51 +217,50 @@ export default function VictimDashboard() {
             <div className="flex items-start gap-3">
               <Siren className="flex-none mt-1" size={24} />
               <div>
-                <h2 className="font-bold text-lg">Yeu cau khan cap dang duoc theo doi</h2>
+                <h2 className="font-bold text-lg">Yêu cầu khẩn cấp đang được theo dõi</h2>
                 <p className="text-red-50 text-sm mt-1">{criticalPost.title}</p>
               </div>
             </div>
             <Link to="/victim/my-posts" className="bg-white text-red-600 px-4 py-2 rounded-lg font-semibold text-sm text-center">
-              Xem chi tiet
+              Xem chi tiết
             </Link>
           </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard icon={<Radio size={20} />} label="Tong yeu cau" value={stats.total} />
-          <StatCard icon={<Clock size={20} />} label="Dang cho" value={stats.pending} />
-          <StatCard icon={<AlertTriangle size={20} />} label="Dang ho tro" value={stats.active} />
-          <StatCard icon={<CheckCircle2 size={20} />} label="Hoan tat" value={stats.completed} />
+          <StatCard icon={<Radio size={20} />} label="Tổng yêu cầu" value={stats.total} />
+          <StatCard icon={<Clock size={20} />} label="Đang chờ" value={stats.pending} />
+          <StatCard icon={<AlertTriangle size={20} />} label="Đang hỗ trợ" value={stats.active} />
+          <StatCard icon={<CheckCircle2 size={20} />} label="Hoàn tất" value={stats.completed} />
         </div>
 
         <section className="bg-white border border-slate-200 rounded-lg overflow-hidden">
           <div className="p-5 border-b flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-red-600">Theo doi nhu giao hang</p>
               <h2 className="font-bold text-xl text-slate-900">
-                {activeTracking ? 'Rescuer dang den ho tro ban' : 'Trang thai cuu ho gan nhat'}
+                {activeTracking ? 'Người cứu hộ đang tới' : 'Trạng thái cứu hộ gần nhất'}
               </h2>
               <p className="text-sm text-slate-500 mt-1">
-                {latestStatus ? latestStatus.title : 'Chua co ca dang theo doi. Khi co rescuer nhan ca, thong tin se hien o day.'}
+                {latestStatus ? latestStatus.title : 'Chưa có ca cứu hộ nào được chấp nhận.'}
               </p>
             </div>
-            <button
+            {/* <button
               type="button"
               disabled={sendingSos}
-              onClick={() => sendQuickSos('Khan cap')}
+              onClick={() => sendQuickSos('Khẩn cấp')}
               className="inline-flex items-center justify-center gap-2 bg-red-700 hover:bg-red-800 text-white font-bold px-5 py-3 rounded-lg disabled:opacity-60"
             >
               <Siren size={20} />
-              SOS khan cap
-            </button>
+              SOS khẩn cấp
+            </button> */}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1.4fr] gap-0">
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-3 gap-2">
-                <TrackerStep label="Da gui" active={Boolean(latestStatus)} done={Boolean(latestStatus)} />
-                <TrackerStep label="Da nhan ca" active={activeTracking} done={Boolean(latestStatus?.rescuer_id)} />
-                <TrackerStep label="Hoan tat" active={latestStatus?.status === 'completed'} done={latestStatus?.status === 'completed'} />
+                <TrackerStep label="Đã gửi" active={Boolean(latestStatus)} done={Boolean(latestStatus)} />
+                <TrackerStep label="Đã nhận ca" active={activeTracking} done={Boolean(latestStatus?.rescuer_id)} />
+                <TrackerStep label="Hoàn tất" active={latestStatus?.status === 'completed'} done={latestStatus?.status === 'completed'} />
               </div>
 
               {latestStatus?.rescuer_id ? (
@@ -270,21 +271,21 @@ export default function VictimDashboard() {
                     </div>
                     <div>
                       <p className="font-bold text-slate-900">{latestStatus.rescuer_name}</p>
-                      <p className="text-xs text-slate-500">Nguoi cuu ho dang ho tro</p>
+                      <p className="text-xs text-slate-500">Người cứu hộ đang hỗ trợ</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                    <InfoPill icon={<PhoneCall size={16} />} label={latestStatus.rescuer_phone || 'Chua co so dien thoai'} />
-                    <InfoPill icon={<Navigation size={16} />} label={distanceKm ? `${distanceKm.toFixed(1)} km` : 'Dang cho vi tri'} />
-                    <InfoPill icon={<Clock size={16} />} label={etaMinutes ? `ETA ${etaMinutes} phut` : 'Chua tinh duoc ETA'} />
-                    <InfoPill icon={<MapPin size={16} />} label={rescuerLocation ? `${Number(rescuerLocation.lat).toFixed(5)}, ${Number(rescuerLocation.lng).toFixed(5)}` : 'Chua co GPS rescuer'} />
+                    <InfoPill icon={<PhoneCall size={16} />} label={latestStatus.rescuer_phone || 'Chưa có số điện thoại'} />
+                    <InfoPill icon={<Navigation size={16} />} label={distanceKm ? `${distanceKm.toFixed(1)} km` : 'Đang chờ vị trí được cập nhật'} />
+                    <InfoPill icon={<Clock size={16} />} label={etaMinutes ? `ETA ${etaMinutes} phut` : 'Chưa tính được ETA'} />
+                    <InfoPill icon={<MapPin size={16} />} label={rescuerLocation ? `${Number(rescuerLocation.lat).toFixed(5)}, ${Number(rescuerLocation.lng).toFixed(5)}` : 'Chưa có GPS của người cứu hộ'} />
                   </div>
                 </div>
               ) : (
                 <div className="border border-dashed border-slate-300 rounded-lg p-4 text-sm text-slate-600">
                   {latestStatus
-                    ? 'Chua co rescuer nhan ca nay. He thong se hien ten, so dien thoai, vi tri va ETA ngay khi co nguoi tiep nhan.'
-                    : 'Chua co ca nao de theo doi. Bam SOS khan cap de tao yeu cau nhanh tu GPS hien tai.'}
+                    ? 'Chưa có người cứu hộ nhận ca này. Hệ thống đang tìm kiếm tình nguyện viên gần nhất để hỗ trợ bạn.'
+                    : 'Chưa có ca nào để theo dõi. Hãy tạo một yêu cầu cứu hộ để hệ thống có thể kết nối bạn với tình nguyện viên.'}
                 </div>
               )}
 
@@ -295,7 +296,7 @@ export default function VictimDashboard() {
                   className="w-full inline-flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-lg font-semibold text-sm hover:bg-emerald-700"
                 >
                   <CheckCircle2 size={18} />
-                  Xac nhan da duoc ho tro
+                  Xác nhận đã được hỗ trợ
                 </button>
               )}
             </div>
@@ -328,7 +329,7 @@ export default function VictimDashboard() {
                 </MapContainer>
               ) : (
                 <div className="h-full min-h-[320px] flex items-center justify-center text-sm text-slate-500">
-                  Chua co toa do ca cuu ho de hien ban do.
+                  Chưa có toạ độ ca cứu hộ
                 </div>
               )}
             </div>
@@ -339,20 +340,20 @@ export default function VictimDashboard() {
           <section className="lg:col-span-2 bg-white border border-slate-200 rounded-lg">
             <div className="p-5 border-b flex items-center justify-between">
               <div>
-                <h2 className="font-bold text-slate-900">Yeu cau gan day</h2>
-                <p className="text-sm text-slate-500">Cap nhat theo trang thai moi nhat trong he thong.</p>
+                <h2 className="font-bold text-slate-900">Yêu cầu gần đây</h2>
+                <p className="text-sm text-slate-500">Cập nhật theo trạng thái mới nhất của hệ thống</p>
               </div>
               <Link to="/victim/my-posts" className="text-sm font-semibold text-red-600 hover:text-red-700">
-                Xem tat ca
+                Xem tất cả
               </Link>
             </div>
 
             <div className="divide-y">
               {loading ? (
-                <div className="p-6 text-center text-slate-500">Dang tai du lieu...</div>
+                <div className="p-6 text-center text-slate-500">Đang tải dữ liệu</div>
               ) : latestPosts.length === 0 ? (
                 <div className="p-8 text-center text-slate-500">
-                  Ban chua co yeu cau nao. Hay tao yeu cau dau tien khi can ho tro.
+                  Bạn chưa có yêu cầu nào. Hãy tạo yêu cầu nếu bạn cần hỗ trợ
                 </div>
               ) : (
                 latestPosts.map(post => (
@@ -375,7 +376,7 @@ export default function VictimDashboard() {
                         <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusStyles[post.status]}`}>
                           {statusLabels[post.status]}
                         </span>
-                        <span className="text-xs text-slate-500">Muc {post.urgency_level}</span>
+                        <span className="text-xs text-slate-500">Mức {post.urgency_level}</span>
                       </div>
                     </div>
                   </Link>
@@ -385,9 +386,9 @@ export default function VictimDashboard() {
           </section>
 
           <aside className="bg-white border border-slate-200 rounded-lg p-5 h-fit">
-            <h2 className="font-bold text-slate-900">Tac vu nhanh</h2>
+            <h2 className="font-bold text-slate-900">Tác vụ nhanh</h2>
             <div className="mt-4 space-y-3">
-              {['Chay', 'Tai nan', 'Ngap', 'Y te', 'Mac ket'].map(type => (
+              {['Cháy', 'Tai nạn', 'Ngập', 'Y tế', 'Mắc kẹt'].map(type => (
                 <button
                   key={type}
                   type="button"
@@ -400,15 +401,15 @@ export default function VictimDashboard() {
               ))}
               <Link to="/victim/create-request" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-red-50 hover:border-red-200">
                 <Siren size={20} className="text-red-600" />
-                <span className="font-semibold text-sm text-slate-800">Gui yeu cau SOS</span>
+                <span className="font-semibold text-sm text-slate-800">Gửi yêu cầu SOS</span>
               </Link>
               <Link to="/victim/conversations" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-slate-50">
                 <MessageSquare size={20} className="text-slate-600" />
-                <span className="font-semibold text-sm text-slate-800">Mo tin nhan ho tro</span>
+                <span className="font-semibold text-sm text-slate-800">Mở tin nhắn</span>
               </Link>
               <Link to="/victim/my-posts" className="flex items-center gap-3 p-3 rounded-lg border hover:bg-slate-50">
                 <Radio size={20} className="text-slate-600" />
-                <span className="font-semibold text-sm text-slate-800">Theo doi vi tri va trang thai</span>
+                <span className="font-semibold text-sm text-slate-800">Theo dõi vị trí và trạng thái</span>
               </Link>
             </div>
           </aside>
@@ -418,19 +419,19 @@ export default function VictimDashboard() {
           <section className="bg-white border border-slate-200 rounded-lg p-5">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="font-bold text-slate-900">Trang thai cuu ho gan nhat</h2>
+                <h2 className="font-bold text-slate-900">Trạng thái cứu trợ gần nhất</h2>
                 <p className="text-sm text-slate-500 mt-1">{latestStatus.title} - {statusLabels[latestStatus.status as RescuePost['status']] || latestStatus.status}</p>
               </div>
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusStyles[latestStatus.status as RescuePost['status']] || 'bg-slate-100'}`}>
-                Muc {latestStatus.urgency_level}
+                Mức {latestStatus.urgency_level}
               </span>
             </div>
             {latestStatus.rescuer_id && (
               <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                 <div className="flex items-center gap-2 text-slate-700"><UserRound size={18} /> {latestStatus.rescuer_name}</div>
-                <div className="flex items-center gap-2 text-slate-700"><Radio size={18} /> {latestStatus.rescuer_phone || 'Chua co SĐT'}</div>
+                <div className="flex items-center gap-2 text-slate-700"><Radio size={18} /> {latestStatus.rescuer_phone || 'Chưa có SĐT'}</div>
                 <div className="flex items-center gap-2 text-slate-700"><MapPin size={18} /> {rescuerLocation ? `${Number(rescuerLocation.lat).toFixed(5)}, ${Number(rescuerLocation.lng).toFixed(5)}` : 'Dang cho vi tri rescuer'}</div>
-                <div className="flex items-center gap-2 text-slate-700"><Clock size={18} /> {distanceKm ? `${distanceKm.toFixed(1)} km - ETA ${etaMinutes} phut` : 'Chua tinh duoc ETA'}</div>
+                
               </div>
             )}
             {latestStatus.status === 'completed' && !latestStatus.victim_confirmed_at && (
@@ -440,7 +441,7 @@ export default function VictimDashboard() {
                 className="mt-4 inline-flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-emerald-700"
               >
                 <CheckCircle2 size={18} />
-                Xac nhan da duoc ho tro
+                Xác nhận đã được hỗ trợ
               </button>
             )}
           </section>
