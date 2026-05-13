@@ -178,42 +178,40 @@ const getAllPendingPosts = async (filters = {}) => {
 const getVictimDashboard = async (userId) => {
     const posts = await getAllPostByUserId(userId);
     const acceptedRequests = await db.query(`
-        SELECT
-            rr.id,
-            rr.title,
-            rr.description,
-            rr.status,
-            rr.urgency_level,
-            rr.address,
-            rr.created_at,
-            ST_Y(rr.location) AS lat,
-            ST_X(rr.location) AS lng,
-            ra.id AS assignment_id,
-            ra.status AS assignment_status,
-            ra.assigned_at,
-            ra.finished_at,
-            ra.completion_note,
-            ra.failure_reason,
-            ra.victim_confirmed_at,
-            ra.response_seconds,
-            ra.resolution_seconds,
-            u.id AS rescuer_id,
-            u.full_name AS rescuer_name,
-            u.phone AS rescuer_phone,
-            u.avatar_url AS rescuer_avatar_url,
-            u.vehicle_info,
-            u.rescuer_skills,
-            ST_Y(u.current_location) AS rescuer_lat,
-            ST_X(u.current_location) AS rescuer_lng
-        FROM rescue_requests rr
-        LEFT JOIN rescue_assignments ra ON ra.request_id = rr.id
-        LEFT JOIN users u ON u.id = ra.rescuer_id
-        WHERE rr.user_id = $1
-          AND rr.status IN ('assigned', 'in_progress', 'completed')
-          AND ra.rescuer_id IS NOT NULL
-        ORDER BY
-            CASE WHEN rr.status IN ('assigned', 'in_progress') THEN 0 ELSE 1 END,
-            rr.created_at DESC
+        SELECT DISTINCT ON (rr.id)
+        rr.id,
+        rr.title,
+        rr.description,
+        rr.status,
+        rr.urgency_level,
+        rr.address,
+        rr.created_at,
+        ST_Y(rr.location) AS lat,
+        ST_X(rr.location) AS lng,
+        ra.id AS assignment_id,
+        ra.status AS assignment_status,
+        ra.assigned_at,
+        ra.finished_at,
+        ra.completion_note,
+        ra.failure_reason,
+        ra.victim_confirmed_at,
+        ra.response_seconds,
+        ra.resolution_seconds,
+        u.id AS rescuer_id,
+        u.full_name AS rescuer_name,
+        u.phone AS rescuer_phone,
+        u.avatar_url AS rescuer_avatar_url,
+        u.vehicle_info,
+        u.rescuer_skills,
+        ST_Y(u.current_location) AS rescuer_lat,
+        ST_X(u.current_location) AS rescuer_lng
+    FROM rescue_requests rr
+    LEFT JOIN rescue_assignments ra ON ra.request_id = rr.id
+    LEFT JOIN users u ON u.id = ra.rescuer_id
+    WHERE rr.user_id = $1
+    AND rr.status IN ('assigned')
+    AND ra.rescuer_id IS NOT NULL
+    ORDER BY rr.id, rr.created_at DESC
     `, [userId]);
 
     return {

@@ -135,6 +135,8 @@ export default function VictimDashboard() {
         setDashboardCounts(res.data.data.counts);
         setLatestStatus(res.data.data.latestStatus);
 
+        navigate('/victim/my-posts');
+
         await fetchDashboard(selectedRequestId);
       } catch (error) {
         console.error(error); 
@@ -236,24 +238,10 @@ export default function VictimDashboard() {
             className="inline-flex items-center justify-center gap-2 bg-red-700 hover:bg-red-800 text-white font-semibold px-4 py-3 rounded-lg disabled:opacity-60"
           >
             <Siren size={18} />
-            {sendingSos ? 'Đang gửi SOS...' : 'SOS nhanh'}
+            {sendingSos ? 'Đang gửi SOS...' : 'SOS khẩn cấp'}
           </button>
         </div>
 
-        {criticalPost && (
-          <div className="bg-red-600 text-white rounded-lg p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <Siren className="flex-none mt-1" size={24} />
-              <div>
-                <h2 className="font-bold text-lg">Yêu cầu khẩn cấp đang được theo dõi</h2>
-                <p className="text-red-50 text-sm mt-1">{criticalPost.title}</p>
-              </div>
-            </div>
-            <Link to="/victim/my-posts" className="bg-white text-red-600 px-4 py-2 rounded-lg font-semibold text-sm text-center">
-              Xem chi tiết
-            </Link>
-          </div>
-        )}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <StatCard icon={<Radio size={20} />} label="Tổng yêu cầu" value={stats.total} />
@@ -305,7 +293,7 @@ export default function VictimDashboard() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <InfoPill icon={<PhoneCall size={16} />} label={latestStatus.rescuer_phone || 'Chưa có số điện thoại'} />
                     <InfoPill icon={<Navigation size={16} />} label={distanceKm ? `${distanceKm.toFixed(1)} km` : 'Đang chờ vị trí được cập nhật'} />
-                    <InfoPill icon={<Clock size={16} />} label={etaMinutes ? `ETA ${etaMinutes} phut` : 'Chưa tính được ETA'} />
+                    <InfoPill icon={<Clock size={16} />} label={etaMinutes ? `ETA ${etaMinutes} phút` : 'Chưa tính được ETA'} />
                     <InfoPill icon={<MapPin size={16} />} label={rescuerLocation ? `${Number(rescuerLocation.lat).toFixed(5)}, ${Number(rescuerLocation.lng).toFixed(5)}` : 'Chưa có GPS của người cứu hộ'} />
                   </div>
                 </div>
@@ -336,7 +324,7 @@ export default function VictimDashboard() {
                   className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold text-sm hover:bg-blue-700 disabled:opacity-60"
                 >
                   {updatingVictimLocation ? <Loader2 size={18} className="animate-spin" /> : <MapPin size={18} />}
-                  {updatingVictimLocation ? 'Dang cap nhat vi tri...' : 'Cap nhat vi tri cua toi'}
+                  {updatingVictimLocation ? 'Đang cập nhật vị trí...' : 'Cập nhật vị trí của tôi'}
                 </button>
               )}
             </div>
@@ -362,7 +350,7 @@ export default function VictimDashboard() {
           <section className="lg:col-span-2 bg-white border border-slate-200 rounded-lg">
             <div className="p-5 border-b flex items-center justify-between">
               <div>
-                <h2 className="font-bold text-slate-900">Yêu cầu gần đây</h2>
+                <h2 className="font-bold text-slate-900">Yêu cầu đã được tiếp nhận</h2>
                 <p className="text-sm text-slate-500">Cập nhật theo trạng thái mới nhất của hệ thống</p>
               </div>
               <Link to="/victim/my-posts" className="text-sm font-semibold text-red-600 hover:text-red-700">

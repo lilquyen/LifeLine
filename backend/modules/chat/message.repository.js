@@ -84,7 +84,6 @@ const insertMessageImages = async (
     messageId,
     imageUrls
 ) => {
-
     for (const imageUrl of imageUrls) {
 
         await db.query(

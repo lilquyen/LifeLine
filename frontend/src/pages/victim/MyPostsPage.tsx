@@ -1,4 +1,3 @@
-// src/pages/victim/MyPostsPage.tsx
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../../services/api';
 import MyPostCard from '../../components/victim/MyPostCard';
@@ -27,7 +26,7 @@ const MyPostsPage = () => {
 
   // Lấy lịch sử vị trí Rescuer khi chọn bài đã được nhận
   useEffect(() => {
-    if (selectedPost && selectedPost.status !== 'pending') {
+    if (selectedPost) {
       fetchRescuerHistory(selectedPost.id);
       
       // Chỉ polling khi status là 'assigned' (đang hoạt động)
@@ -104,7 +103,7 @@ const MyPostsPage = () => {
       const res = await api.get(`/locations/history/${requestId}`);
       // Sắp xếp theo thời gian tăng dần để vẽ đường đi
       const sortedLocations = (res.data || []).sort((a: any, b: any) => 
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()
       );
       setRescuerLocations(sortedLocations);
     } catch (err) { 
@@ -164,12 +163,12 @@ const MyPostsPage = () => {
     const rescuerPoints = rescuerLocations.map((loc, index) => ({
       id: `rescuer-${loc.id || index}`,
       type: 'rescuer',
-      title: index === rescuerLocations.length - 1 ? 'Vị trí hiện tại của cứu hộ viên' : `Vị trí lúc ${new Date(loc.created_at).toLocaleTimeString('vi-VN')}`,
+      title: index === rescuerLocations.length - 1 ? 'Vị trí hiện tại của cứu hộ viên' : `Vị trí lúc ${new Date(loc.recorded_at).toLocaleTimeString('vi-VN')}`,
       lat: Number(loc.lat),
       lng: Number(loc.lng),
       level: 1 as 1 | 2 | 3 | 4 | 5,
       status: 'rescuer' as 'rescuer',
-      timestamp: loc.created_at
+      timestamp: loc.recorded_at
     }));
 
     // Đường đi (các điểm theo thứ tự thời gian)
@@ -222,7 +221,7 @@ const MyPostsPage = () => {
       {/* NỬA PHẢI: BẢN ĐỒ (TRÊN) & CHAT (DƯỚI) */}
       <div className="w-3/5 flex flex-col h-full">
         
-        {/* PHẦN TRÊN: BẢN ĐỒ (60%) */}
+        {/* PHẦN TRÊN: BẢN ĐỒ  */}
         <div className="h-[60%] border-b relative bg-slate-100">
           {selectedPost && selectedPost.lat && selectedPost.lng ? (
             <GoogleMapsComponent 
@@ -250,7 +249,7 @@ const MyPostsPage = () => {
           )}
         </div>
 
-        {/* PHẦN DƯỚI: KHUNG CHAT (40%) */}
+        {/* PHẦN DƯỚI: KHUNG CHAT */}
         <div className="h-[60%] flex flex-col bg-white overflow-hidden border-t">
           {selectedPost?.status === 'pending' ? (
             /* Trạng thái Đang chờ */

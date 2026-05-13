@@ -14,7 +14,6 @@ import RescuerAssignments from './pages/rescuer/RescuerAssignments';
 import RescuerAssignmentHistory from './pages/rescuer/RescuerAssignmentHistory';
 
 import ConversationsPage from './pages/chat/MessagePage';
-import TestUI from './pages/TestUI';
 import AdminDashboard from './pages/admin/AdminDashboard';
 
 function App() {
@@ -68,7 +67,6 @@ function App() {
         </Route>
 
         {/* Test route */}
-        <Route path="/test-ui" element={<TestUI />} />
         
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/login" replace />} />

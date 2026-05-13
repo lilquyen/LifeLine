@@ -32,7 +32,7 @@ export default function RescuerAssignments() {
     const lng = localStorage.getItem('rescuer_lng');
     return lat && lng ? { lat: Number(lat), lng: Number(lng) } : null;
   });
-  const [trackingEnabled, setTrackingEnabled] = useState(true);
+  const [trackingEnabled, setTrackingEnabled] = useState(false);
   const [trackingError, setTrackingError] = useState('');
   const [trackingStatus, setTrackingStatus] = useState('');
   const navigate = useNavigate();

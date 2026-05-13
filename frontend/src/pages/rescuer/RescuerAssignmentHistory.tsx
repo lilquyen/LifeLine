@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AssignmentCard } from '../../components/rescuer/AssignmentCard';
 import { RequestDetail } from '../../components/rescuer/RequestDetail';
 import { fetchMyAssignments, getConversationByRequest } from '../../services/rescuerApi';
+import React from 'react';
 
 const HISTORY_STATUSES = ['cancelled', 'completed'];
 

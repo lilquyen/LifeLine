@@ -66,11 +66,7 @@ const getLatestLocation = async (requestId) => {
         JOIN rescue_assignments 
         ON rescue_assignments.request_id = location_history.request_id
         WHERE location_history.request_id = $1
-<<<<<<< HEAD
         AND rescue_assignments.status IN ('accepted', 'in_progress')
-=======
-        AND rescue_assignments.status = 'accepted'
->>>>>>> dev
         ORDER BY recorded_at DESC
         LIMIT 1
     `;
