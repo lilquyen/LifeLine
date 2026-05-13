@@ -1,7 +1,8 @@
 import React from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { NavLink } from 'react-router-dom'; // Đổi từ Link sang NavLink
-import { MessageSquare, Map, Bell, Users, LogOut, ShieldAlert } from 'lucide-react';
+import { History, MessageSquare, Map, Users, LogOut, ShieldAlert } from 'lucide-react';
+import NotificationBell from '../../components/NotificationBell';
 
 export default function RescureLayout() {
   const navigate = useNavigate();
@@ -46,6 +47,20 @@ export default function RescureLayout() {
           Các ca cứu hộ
         </NavLink>
 
+        <NavLink
+          to="/rescuer/assignment-history"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+              isActive
+                ? 'bg-red-600 text-white shadow-md shadow-red-900/20'
+                : 'text-gray-300 hover:bg-slate-800 hover:text-white'
+            }`
+          }
+        >
+          <History size={20} />
+          Lịch sử ca
+        </NavLink>
+
         <NavLink 
           to="/rescuer/conversations" 
           className={({ isActive }) => 
@@ -70,10 +85,7 @@ export default function RescureLayout() {
         <header className="h-16 bg-white shadow-sm flex items-center justify-between px-8 z-10">
           <h2 className="text-xl font-semibold text-slate-800">Tổng đài Tình nguyện viên</h2>
           <div className="flex items-center gap-5">
-            <button className="relative p-2 text-slate-400 hover:bg-slate-100 rounded-full transition">
-              <Bell size={22} />
-              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
-            </button>
+            <NotificationBell />
             <div className="flex items-center gap-3 border-l pl-5">
               <div className="w-9 h-9 bg-slate-800 text-white flex items-center justify-center rounded-full font-bold shadow">TN</div>
             </div>

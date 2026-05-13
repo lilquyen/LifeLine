@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MapPin, Calendar, MessageCircle, X, Loader2, Eye, XCircle } from 'lucide-react';
-import { updateLocation, cancelAssignment, failAssignment, updateLocationHistory } from '../../services/rescuerApi';
+import { cancelAssignment, failAssignment, completeAssignment } from '../../services/rescuerApi';
 
 interface AssignmentCardProps {
   assignment: {
@@ -15,6 +15,7 @@ interface AssignmentCardProps {
   };
   onMessage: (requestId: number) => void;
   onViewDetail: (requestId: number) => void;
+  onViewLocation?: (requestId: number) => void;
   onAssignmentUpdate?: () => void; // Callback để refresh danh sách sau khi cập nhật
 }
 
@@ -22,12 +23,14 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
   assignment, 
   onMessage, 
   onViewDetail,
+  onViewLocation,
   onAssignmentUpdate 
 }) => {
-  const [updatingLocation, setUpdatingLocation] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelMessage, setCancelMessage] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [completeNote, setCompleteNote] = useState('');
+  const [completing, setCompleting] = useState(false);
 
   const statusColor = assignment.assignment_status === 'accepted' 
     ? 'text-green-600 bg-green-100' 
@@ -41,37 +44,6 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
     ? 'Đã hủy'
     : 'Đã hoàn thành';
 
-  // Cập nhật vị trí
-  const handleUpdateLocation = () => {
-    if (!navigator.geolocation) {
-      alert('Trình duyệt không hỗ trợ định vị');
-      return;
-    }
-    
-    setUpdatingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        try {
-          await updateLocationHistory(assignment.request_id, lat, lng);
-          await updateLocation(lat, lng);
-          alert('Cập nhật vị trí thành công');
-          onAssignmentUpdate?.();
-        } catch (error) {
-          console.error(error);
-          alert('Cập nhật thất bại');
-        } finally {
-          setUpdatingLocation(false);
-        }
-      },
-      (err) => {
-        console.error(err);
-        alert('Không thể lấy vị trí hiện tại');
-        setUpdatingLocation(false);
-      }
-    );
-  };
-
   // Hủy ca cứu hộ
   const handleCancelAssignment = async () => {
     if (!cancelMessage.trim()) {
@@ -84,7 +56,7 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
       // Gửi tin nhắn hủy
       await cancelAssignment(assignment.request_id, cancelMessage);
       // Đánh dấu assignment thất bại
-      await failAssignment(assignment.request_id);
+      await failAssignment(assignment.request_id, cancelMessage);
       
       alert('Đã hủy ca cứu hộ');
       setShowCancelModal(false);
@@ -95,6 +67,21 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
       alert('Hủy ca thất bại');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleCompleteAssignment = async () => {
+    setCompleting(true);
+    try {
+      await completeAssignment(assignment.request_id, completeNote || 'Da ho tro xong');
+      alert('Da danh dau hoan tat');
+      setCompleteNote('');
+      onAssignmentUpdate?.();
+    } catch (error) {
+      console.error(error);
+      alert('Cap nhat hoan tat that bai');
+    } finally {
+      setCompleting(false);
     }
   };
 
@@ -135,14 +122,13 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
           </button>
 
           {assignment.assignment_status === 'accepted' ? (
-            // Chỉ hiện nút Cập nhật vị trí và Hủy ca khi đang trong trạng thái 'accepted'
+            // Chỉ hiện nút xem vị trí và Hủy ca khi đang trong trạng thái 'accepted'
             <>
               <button
-                onClick={handleUpdateLocation}
-                disabled={updatingLocation}
+                onClick={() => onViewLocation?.(assignment.request_id)}
                 className="flex items-center justify-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-semibold hover:bg-green-100 transition-colors border border-green-100"
               >
-                {updatingLocation ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
+                <MapPin size={16} />
                 Vị trí
               </button>
               
@@ -152,6 +138,20 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
               >
                 <XCircle size={16} />
                 Hủy ca
+              </button>
+              <input
+                value={completeNote}
+                onChange={(e) => setCompleteNote(e.target.value)}
+                placeholder="Ghi chu ket qua ho tro"
+                className="col-span-2 px-3 py-2 border rounded-lg text-sm"
+              />
+              <button
+                onClick={handleCompleteAssignment}
+                disabled={completing}
+                className="col-span-2 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50"
+              >
+                {completing ? <Loader2 size={16} className="animate-spin" /> : <Calendar size={16} />}
+                Hoan tat ca
               </button>
             </>
           ) : assignment.assignment_status === 'cancelled' ? (

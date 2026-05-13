@@ -4,21 +4,18 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/auth/LoginPage';
 
 import VictimLayout from './pages/victim/VictimLayout';
+import VictimDashboard from './pages/victim/VictimDashboard';
 import CreateRequest from './pages/victim/CreateRequest';
 import MyPostsPage from './pages/victim/MyPostsPage';
 
 import RescureLayout from './pages/rescuer/RescureLayout';
 import RescuerDashboard from './pages/rescuer/RescuerDashboard';
 import RescuerAssignments from './pages/rescuer/RescuerAssignments';
+import RescuerAssignmentHistory from './pages/rescuer/RescuerAssignmentHistory';
 
 import ConversationsPage from './pages/chat/MessagePage';
 import TestUI from './pages/TestUI';
-
-const VictimDashboardTemp = () => (
-  <div className="p-10 text-2xl font-bold text-red-600">
-    Victim Dashboard (Coming Soon)
-  </div>
-);
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 function App() {
   return (
@@ -37,11 +34,21 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="dashboard" element={<VictimDashboardTemp />} />
+          <Route index element={<Navigate to="/victim/dashboard" replace />} />
+          <Route path="dashboard" element={<VictimDashboard />} />
           <Route path="create-request" element={<CreateRequest />} />
           <Route path="my-posts" element={<MyPostsPage />} />
           <Route path="conversations" element={<ConversationsPage />} />
         </Route>
+
+        <Route
+          path="/admin/*"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Rescuer routes */}
         <Route
@@ -54,6 +61,7 @@ function App() {
         >
           <Route path="dashboard" element={<RescuerDashboard />} />
           <Route path="assignments" element={<RescuerAssignments />} />
+          <Route path="assignment-history" element={<RescuerAssignmentHistory />} />
           <Route path="conversations" element={<ConversationsPage />} />
           <Route path="conversations/:conversationId" element={<ConversationsPage />} />
         </Route>

@@ -11,6 +11,7 @@ API.interceptors.request.use((config) => {
 
 // Lấy danh sách các bài đăng đang pending (chưa có rescuer nhận)
 export const fetchPendingRequests = () => API.get('/rescue-posts/pending');
+export const fetchPendingRequestsFiltered = (params: Record<string, any>) => API.get('/rescue-posts/pending', { params });
 
 // Lấy chi tiết một bài đăng theo id
 export const fetchRequestDetail = (id: number) => API.get(`/rescue-posts/${id}`);
@@ -32,10 +33,20 @@ export const updateLocationHistory = (requestId: number, lat: number, lng: numbe
 
 // Lấy tất cả các bài đăng (cho tab Tất cả)
 export const fetchAllRequests = () => API.get('/rescue-posts');
+export const fetchAllRequestsFiltered = (params: Record<string, any>) => API.get('/rescue-posts', { params });
 
 // Hủy ca cứu (gửi tin nhắn hủy)
 export const cancelAssignment = (conversationId: number, content: string) => 
   API.post(`/chat/messages/cancel/${conversationId}`, { content });
 
-export const failAssignment = (postId: number) => 
-  API.post(`/assignments/fail/${postId}`);
+export const failAssignment = (postId: number, reason?: string) => 
+  API.post(`/assignments/fail/${postId}`, { reason });
+
+export const completeAssignment = (postId: number, note?: string) =>
+  API.post(`/assignments/complete/${postId}`, { note });
+
+export const fetchLatestRescuerLocation = (requestId: number) =>
+  API.get(`/locations/latest/${requestId}`);
+
+export const fetchLocationHistory = (requestId: number) =>
+  API.get(`/locations/history/${requestId}`);

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import useAuthStore from '../../stores/authStore';
+import NotificationBell from '../../components/NotificationBell';
 
 export default function VictimLayout() {
   const { user, logout } = useAuthStore();
@@ -22,7 +23,14 @@ export default function VictimLayout() {
           </div>
 
           <div className="flex items-center gap-6">
-            
+            <NavLink
+              to="/victim/dashboard"
+              className={({ isActive }) =>
+                `text-sm font-medium ${isActive ? 'text-red-600' : 'text-gray-600 hover:text-red-600'}`
+              }
+            >
+              Dashboard
+            </NavLink>
             <NavLink
               to="/victim/create-request"
               className={({ isActive }) =>
@@ -51,6 +59,7 @@ export default function VictimLayout() {
 
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-600">👤 {user?.full_name}</span>
+            <NotificationBell />
             <button
               onClick={handleLogout}
               className="text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
