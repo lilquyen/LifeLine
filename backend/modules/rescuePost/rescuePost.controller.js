@@ -33,7 +33,7 @@ const createPost = async (req, res) => {
 
 const getAllPosts = async (req, res) => {
     try {
-        const posts = await service.getAllPosts();
+        const posts = await service.getAllPosts(req.query);
 
         res.json(posts);
     } catch (err) {
@@ -47,7 +47,7 @@ const getAllPosts = async (req, res) => {
 
 const getAllPendingPosts = async (req, res) => {
     try {
-        const posts = await service.getAllPendingPosts();
+        const posts = await service.getAllPendingPosts(req.query);
 
         res.json(posts);
     } catch (err) {
@@ -93,6 +93,34 @@ const getAllPostByUserId = async (req, res) => {
     }
 }
 
+const getVictimDashboard = async (req, res) => {
+    try {
+        const dashboard = await service.getVictimDashboard(req.user.id);
+        return res.status(200).json({ success: true, data: dashboard });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ success: false, message: 'Server error' });
+    }
+}
+
+const getNearestRescuers = async (req, res) => {
+    try {
+        const rescuers = await service.getNearestRescuers(req.params.id);
+        return res.status(200).json({ success: true, data: rescuers });
+    } catch (err) {
+        return res.status(400).json({ success: false, message: err.message });
+    }
+}
+
+const getAdminStats = async (req, res) => {
+    try {
+        const stats = await service.getAdminStats();
+        return res.status(200).json({ success: true, data: stats });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+}
+
 
 
 module.exports = {
@@ -100,5 +128,8 @@ module.exports = {
     getAllPosts,
     getPostById,
     getAllPostByUserId,
-    getAllPendingPosts
+    getAllPendingPosts,
+    getVictimDashboard,
+    getNearestRescuers,
+    getAdminStats
 }

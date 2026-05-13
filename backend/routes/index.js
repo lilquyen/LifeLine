@@ -8,5 +8,6 @@ router.use('/locations', require('../modules/locationHistory/locationHistory.rou
 router.use('/chat', require('../modules/chat/message.routes'));
 router.use('/conversations', require('../modules/conversation/conversation.routes'));
 router.use('/rescuer/conversations', require('../modules/conversation/rescuer_conversation.routes'));
+router.use('/notifications', require('../modules/notification/notification.routes'));
 
 module.exports = router;

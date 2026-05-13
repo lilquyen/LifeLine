@@ -9,7 +9,7 @@ router.post('/add',
     auth, 
     role(['rescuer']),
     controller.updateLocation);
-router.get('/history', auth, controller.getLocationHistory);
-router.get('/latest', auth, controller.getLatestLocation);
+router.get('/history/:requestId', auth, controller.getLocationHistory);
+router.get('/latest/:requestId', auth, controller.getLatestLocation);
 
 module.exports = router;

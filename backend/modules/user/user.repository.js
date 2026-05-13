@@ -51,7 +51,8 @@ const findById = async (id) => {
 const updateLocation = async (userId, lat, lng) => {
     const query = `
         UPDATE users
-        SET current_location = ST_SetSRID(ST_MakePoint($1, $2), 4326)
+        SET current_location = ST_SetSRID(ST_MakePoint($1, $2), 4326),
+            last_seen_at = NOW()
         WHERE id = $3
         RETURNING *;
     `;
@@ -92,11 +93,89 @@ const getUserByRequestId = async (requestId) => {
     return result.rows[0];
 }
 
+const updateProfile = async (userId, data) => {
+    const result = await db.query(`
+        UPDATE users
+        SET full_name = COALESCE($2, full_name),
+            phone = COALESCE($3, phone),
+            avatar_url = COALESCE($4, avatar_url),
+            is_active = COALESCE($5, is_active),
+            rescuer_skills = COALESCE($6, rescuer_skills),
+            vehicle_info = COALESCE($7, vehicle_info),
+            last_seen_at = NOW()
+        WHERE id = $1
+        RETURNING id, username, phone, full_name, role, avatar_url, is_active,
+                  rescuer_skills, vehicle_info, last_seen_at, created_at
+    `, [
+        userId,
+        data.full_name || null,
+        data.phone || null,
+        data.avatar_url || null,
+        typeof data.is_active === 'boolean' ? data.is_active : null,
+        Array.isArray(data.rescuer_skills) ? data.rescuer_skills : null,
+        data.vehicle_info || null
+    ]);
+
+    return result.rows[0];
+}
+
+const listUsers = async (filters = {}) => {
+    const values = [];
+    const where = [];
+    if (filters.role) {
+        values.push(filters.role);
+        where.push(`role = $${values.length}`);
+    }
+    if (filters.q) {
+        values.push(`%${filters.q}%`);
+        where.push(`(username ILIKE $${values.length} OR full_name ILIKE $${values.length} OR phone ILIKE $${values.length})`);
+    }
+
+    const result = await db.query(`
+        SELECT id, username, phone, full_name, role, avatar_url, is_active,
+               rescuer_skills, vehicle_info, last_seen_at, created_at
+        FROM users
+        ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+        ORDER BY created_at DESC
+        LIMIT 200
+    `, values);
+
+    return result.rows;
+}
+
+const setActive = async (userId, isActive) => {
+    const result = await db.query(`
+        UPDATE users
+        SET is_active = $2,
+            last_seen_at = NOW()
+        WHERE id = $1
+        RETURNING id, username, phone, full_name, role, avatar_url, is_active,
+                  rescuer_skills, vehicle_info, last_seen_at, created_at
+    `, [userId, isActive]);
+
+    return result.rows[0];
+}
+
+const getActiveRescuerIds = async () => {
+    const result = await db.query(`
+        SELECT id
+        FROM users
+        WHERE role = 'rescuer' AND is_active = TRUE
+    `);
+
+    return result.rows.map(row => row.id);
+}
+
 module.exports = {
     createUser,
     findByUsername,
     findByPhone,
     findById,
     updateLocation,
-    getCurrentLocation
+    getCurrentLocation,
+    getUserByRequestId,
+    getActiveRescuerIds,
+    updateProfile,
+    listUsers,
+    setActive
 }

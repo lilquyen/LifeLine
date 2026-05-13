@@ -1,7 +1,8 @@
 const rescuePostRepo = require('./rescuePost.repository');
 const imageRepo = require('../../common/repository/requestImages.repository')
 const db = require('../../config/db');
-const { get } = require('http');
+const notificationService = require('../notification/notification.service');
+const userRepo = require('../user/user.repository');
 
 const createPost = async (data, userId) => {
     const client = await db.connect();
@@ -28,6 +29,20 @@ const createPost = async (data, userId) => {
 
         await client.query('COMMIT');
 
+        try {
+            if (post.urgency_level < 4) return post;
+            const rescuerIds = await userRepo.getActiveRescuerIds();
+            await notificationService.notifyUsers(
+                rescuerIds,
+                'Co yeu cau cuu ho moi',
+                `${post.title} - muc do ${post.urgency_level}`,
+                'new_rescue_request',
+                post.id
+            );
+        } catch (notifyError) {
+            console.warn('Create rescue notification failed:', notifyError.message);
+        }
+
         return post;
 
     } catch (err) {
@@ -38,8 +53,8 @@ const createPost = async (data, userId) => {
     }
 };
 
-const getAllPosts = async () => {
-    return rescuePostRepo.getAllPosts();
+const getAllPosts = async (filters = {}) => {
+    return rescuePostRepo.getAllPosts(filters);
 }
 
 const getPostById = async (id) => {
@@ -52,8 +67,8 @@ const getPostById = async (id) => {
     return post;
 }
 
-const getAllPendingPosts = async () => {
-    return rescuePostRepo.getAllPendingPosts();
+const getAllPendingPosts = async (filters = {}) => {
+    return rescuePostRepo.getAllPendingPosts(filters);
 }
 
 const getAllPostByUserId = async (userId) => {
@@ -64,11 +79,26 @@ const getVictimByPostId = async (postId) => {
     return rescuePostRepo.getUserIdByRequestId(postId);
 }
 
+const getVictimDashboard = async (userId) => {
+    return rescuePostRepo.getVictimDashboard(userId);
+}
+
+const getNearestRescuers = async (requestId) => {
+    return rescuePostRepo.getNearestRescuers(requestId);
+}
+
+const getAdminStats = async () => {
+    return rescuePostRepo.getAdminStats();
+}
+
 module.exports = {
     createPost,
     getAllPosts,
     getPostById,
     getAllPostByUserId,
     getVictimByPostId,
-    getAllPendingPosts
+    getAllPendingPosts,
+    getVictimDashboard,
+    getNearestRescuers,
+    getAdminStats
 }

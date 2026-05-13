@@ -23,6 +23,12 @@ router.post('/fail/:postId',
     controller.failRescue 
 );
 
+router.post('/confirm/:postId',
+    auth,
+    role(['victim']),
+    controller.confirmByVictim
+);
+
 router.get('/my', 
     auth, 
     role(['rescuer']),

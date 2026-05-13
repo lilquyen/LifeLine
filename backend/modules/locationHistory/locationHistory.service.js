@@ -1,9 +1,23 @@
 const locationHisRepo = require('./locationHistory.repository');
 const userRepo = require('../user/user.repository');
+const socketLib = require('../../common/socket');
 
 const updateLocation = async (userId, data) => {
     const { requestId, lat, lng } = data;
-    return await locationHisRepo.updateLocation(userId, requestId, lat, lng);
+    const location = await locationHisRepo.updateLocation(userId, requestId, lat, lng);
+
+    try {
+        const victim = await userRepo.getUserByRequestId(requestId);
+        const io = socketLib.getIo();
+        io.to(`request_${requestId}`).emit('rescuer_location_updated', location);
+        if (victim?.id) {
+            io.to(`user_${victim.id}`).emit('rescuer_location_updated', location);
+        }
+    } catch (error) {
+        console.warn('Location socket skipped:', error.message);
+    }
+
+    return location;
 }
 
 const getLocationHistory = async (requestId) => {

@@ -38,10 +38,19 @@ module.exports = {
               socket.join(`conversation_${conversationId}`);
               console.log(`User ${socket.user.id} joined conversation_${conversationId}`);
             });
+
+            socket.on('join_request', (requestId) => {
+              socket.join(`request_${requestId}`);
+              console.log(`User ${socket.user.id} joined request_${requestId}`);
+            });
       
             // Rời room conversation
             socket.on('leave_conversation', (conversationId) => {
               socket.leave(`conversation_${conversationId}`);
+            });
+
+            socket.on('leave_request', (requestId) => {
+              socket.leave(`request_${requestId}`);
             });
       
             socket.on('disconnect', () => {

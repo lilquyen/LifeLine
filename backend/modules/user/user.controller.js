@@ -61,9 +61,39 @@ const updateLocation = async (req, res) => {
     }
 }
 
+const updateProfile = async (req, res) => {
+    try {
+        const user = await service.updateProfile(req.user.id, req.body);
+        res.json({ success: true, data: user });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+}
+
+const listUsers = async (req, res) => {
+    try {
+        const users = await service.listUsers(req.query);
+        res.json({ success: true, data: users });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+}
+
+const setActive = async (req, res) => {
+    try {
+        const user = await service.setActive(req.params.id, Boolean(req.body?.is_active));
+        res.json({ success: true, data: user });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+}
+
 module.exports = {
     register,
     login,
     getMe,
-    updateLocation
+    updateLocation,
+    updateProfile,
+    listUsers,
+    setActive
 }

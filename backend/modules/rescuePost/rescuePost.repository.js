@@ -24,7 +24,43 @@ const createPost = async (client, data) => {
     return result.rows[0];
 };
 
-const getAllPosts = async () => {
+const buildRequestFilters = (filters = {}, forcePending = false) => {
+    const where = [];
+    const values = [];
+    const add = (value) => {
+        values.push(value);
+        return `$${values.length}`;
+    };
+
+    if (forcePending) {
+        where.push(`status = 'pending'`);
+    } else if (filters.status) {
+        where.push(`status = ${add(filters.status)}`);
+    }
+
+    if (filters.urgency_level) where.push(`urgency_level = ${add(Number(filters.urgency_level))}`);
+    if (filters.min_urgency) where.push(`urgency_level >= ${add(Number(filters.min_urgency))}`);
+    if (filters.address) where.push(`address ILIKE ${add(`%${filters.address}%`)}`);
+    if (filters.q) where.push(`(title ILIKE ${add(`%${filters.q}%`)} OR description ILIKE ${add(`%${filters.q}%`)})`);
+
+    const distanceSelect = filters.lat && filters.lng
+        ? `, ST_Distance(location::geography, ST_SetSRID(ST_MakePoint(${add(Number(filters.lng))}, ${add(Number(filters.lat))}), 4326)::geography) AS distance_meters`
+        : `, NULL::double precision AS distance_meters`;
+
+    const orderBy = filters.lat && filters.lng
+        ? `ORDER BY urgency_level DESC, distance_meters ASC, created_at DESC`
+        : `ORDER BY urgency_level DESC, created_at DESC`;
+
+    return {
+        whereSql: where.length ? `WHERE ${where.join(' AND ')}` : '',
+        values,
+        distanceSelect,
+        orderBy
+    };
+};
+
+const getAllPosts = async (filters = {}) => {
+    const { whereSql, values, distanceSelect, orderBy } = buildRequestFilters(filters);
     const result = await db.query(`
         SELECT 
             id,
@@ -37,9 +73,11 @@ const getAllPosts = async () => {
             address,
             status,
             created_at
+            ${distanceSelect}
         FROM rescue_requests 
-        ORDER BY created_at DESC`
-    );
+        ${whereSql}
+        ${orderBy}
+    `, values);
     
     return result.rows;
 }
@@ -114,7 +152,8 @@ const getUserIdByRequestId = async (requestId) => {
     return result.rows[0]?.user_id;
 }
 
-const getAllPendingPosts = async () => {
+const getAllPendingPosts = async (filters = {}) => {
+    const { whereSql, values, distanceSelect, orderBy } = buildRequestFilters(filters, true);
     const result = await db.query(`
         SELECT 
             id,
@@ -127,13 +166,132 @@ const getAllPendingPosts = async () => {
             address,
             status,
             created_at
+            ${distanceSelect}
         FROM rescue_requests 
-        WHERE status = 'pending'
-        ORDER BY created_at DESC`
-    );
+        ${whereSql}
+        ${orderBy}
+    `, values);
     
     return result.rows;
 }
+
+const getVictimDashboard = async (userId) => {
+    const posts = await getAllPostByUserId(userId);
+    const latestActive = await db.query(`
+        SELECT
+            rr.id,
+            rr.title,
+            rr.status,
+            rr.urgency_level,
+            rr.address,
+            rr.created_at,
+            ST_Y(rr.location) AS lat,
+            ST_X(rr.location) AS lng,
+            ra.id AS assignment_id,
+            ra.status AS assignment_status,
+            ra.assigned_at,
+            ra.finished_at,
+            ra.completion_note,
+            ra.failure_reason,
+            ra.victim_confirmed_at,
+            ra.response_seconds,
+            ra.resolution_seconds,
+            u.id AS rescuer_id,
+            u.full_name AS rescuer_name,
+            u.phone AS rescuer_phone,
+            u.avatar_url AS rescuer_avatar_url,
+            u.vehicle_info,
+            u.rescuer_skills,
+            ST_Y(u.current_location) AS rescuer_lat,
+            ST_X(u.current_location) AS rescuer_lng
+        FROM rescue_requests rr
+        LEFT JOIN rescue_assignments ra ON ra.request_id = rr.id
+        LEFT JOIN users u ON u.id = ra.rescuer_id
+        WHERE rr.user_id = $1
+        ORDER BY
+            CASE WHEN rr.status IN ('assigned', 'in_progress') THEN 0 ELSE 1 END,
+            rr.created_at DESC
+        LIMIT 1
+    `, [userId]);
+
+    return {
+        counts: {
+            total: posts.length,
+            pending: posts.filter(post => post.status === 'pending').length,
+            active: posts.filter(post => ['assigned', 'in_progress'].includes(post.status)).length,
+            completed: posts.filter(post => post.status === 'completed').length
+        },
+        latestStatus: latestActive.rows[0] || null,
+        recentRequests: posts.slice(0, 5)
+    };
+};
+
+const getNearestRescuers = async (requestId) => {
+    const result = await db.query(`
+        SELECT
+            u.id,
+            u.full_name,
+            u.phone,
+            u.avatar_url,
+            u.vehicle_info,
+            u.rescuer_skills,
+            ST_Y(u.current_location) AS lat,
+            ST_X(u.current_location) AS lng,
+            ST_Distance(u.current_location::geography, rr.location::geography) AS distance_meters
+        FROM rescue_requests rr
+        JOIN users u ON u.role = 'rescuer'
+        WHERE rr.id = $1
+          AND u.is_active = TRUE
+          AND u.current_location IS NOT NULL
+        ORDER BY distance_meters ASC
+        LIMIT 10
+    `, [requestId]);
+
+    return result.rows;
+};
+
+const getAdminStats = async () => {
+    const [byDay, byUrgency, byStatus, totals] = await Promise.all([
+        db.query(`
+            SELECT created_at::date AS day, COUNT(*)::int AS total
+            FROM rescue_requests
+            GROUP BY created_at::date
+            ORDER BY day DESC
+            LIMIT 14
+        `),
+        db.query(`
+            SELECT urgency_level, COUNT(*)::int AS total
+            FROM rescue_requests
+            GROUP BY urgency_level
+            ORDER BY urgency_level
+        `),
+        db.query(`
+            SELECT status, COUNT(*)::int AS total
+            FROM rescue_requests
+            GROUP BY status
+            ORDER BY status
+        `),
+        db.query(`
+            SELECT
+                COUNT(*)::int AS total_requests,
+                AVG(ra.response_seconds)::int AS avg_response_seconds,
+                AVG(ra.resolution_seconds)::int AS avg_resolution_seconds,
+                ROUND(
+                    100.0 * COUNT(*) FILTER (WHERE rr.status = 'completed') / NULLIF(COUNT(*), 0),
+                    1
+                ) AS completion_rate
+            FROM rescue_requests rr
+            LEFT JOIN rescue_assignments ra ON ra.request_id = rr.id
+        `)
+    ]);
+
+    return {
+        byDay: byDay.rows,
+        byUrgency: byUrgency.rows,
+        byStatus: byStatus.rows,
+        totals: totals.rows[0]
+    };
+};
 
 module.exports = {
     createPost,
@@ -141,5 +299,8 @@ module.exports = {
     getPostById,
     getAllPostByUserId,
     getUserIdByRequestId,
-    getAllPendingPosts
+    getAllPendingPosts,
+    getVictimDashboard,
+    getNearestRescuers,
+    getAdminStats
 }

@@ -68,9 +68,24 @@ const updateLocation = async (userId, lat, lng) => {
     return await repo.updateLocation(userId, lat, lng);
 }
 
+const updateProfile = async (userId, data) => {
+    return repo.updateProfile(userId, data);
+}
+
+const listUsers = async (filters) => {
+    return repo.listUsers(filters);
+}
+
+const setActive = async (userId, isActive) => {
+    return repo.setActive(userId, isActive);
+}
+
 module.exports = {
     register,
     login,
     getMe,
-    updateLocation
+    updateLocation,
+    updateProfile,
+    listUsers,
+    setActive
 }

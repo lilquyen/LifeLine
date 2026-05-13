@@ -1,16 +1,38 @@
 const db = require('../../config/db');
 
 const updateLocation = async (userId, requestId, lat, lng) => {
-    const query = `
-        INSERT INTO location_history (rescuer_id, request_id, location, recorded_at)
-        VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326), NOW())
-        `;
-    
-    const values = [userId, requestId, lng, lat];
+    const client = await db.connect();
 
-    const result = await db.query(query, values);
+    try {
+        await client.query('BEGIN');
 
-    return result.rows;
+        await client.query(`
+            UPDATE users
+            SET current_location = ST_SetSRID(ST_MakePoint($1, $2), 4326),
+                last_seen_at = NOW()
+            WHERE id = $3
+        `, [lng, lat, userId]);
+
+        const result = await client.query(`
+            INSERT INTO location_history (rescuer_id, request_id, location, recorded_at)
+            VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326), NOW())
+            RETURNING
+                id,
+                rescuer_id,
+                request_id,
+                ST_Y(location) AS lat,
+                ST_X(location) AS lng,
+                recorded_at
+        `, [userId, requestId, lng, lat]);
+
+        await client.query('COMMIT');
+        return result.rows[0];
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
 }
 
 const getLocationHistory = async (requestId) => {
@@ -23,13 +45,13 @@ const getLocationHistory = async (requestId) => {
         FROM location_history
         JOIN rescue_assignments 
         ON rescue_assignments.request_id = location_history.request_id
-        WHERE request_id = $1
-        AND rescue_assignments.status = 'accepted'
+        WHERE location_history.request_id = $1
+        AND rescue_assignments.status IN ('accepted', 'in_progress')
         ORDER BY recorded_at ASC
     `;
 
     const result = await db.query(query, [requestId]);
-    return result.rows[0];
+    return result.rows;
 }
 
 const getLatestLocation = async (requestId) => {
@@ -42,8 +64,8 @@ const getLatestLocation = async (requestId) => {
         FROM location_history
         JOIN rescue_assignments 
         ON rescue_assignments.request_id = location_history.request_id
-        WHERE request_id = $1
-        AND rescue_assignments.status = 'accepted'
+        WHERE location_history.request_id = $1
+        AND rescue_assignments.status IN ('accepted', 'in_progress')
         ORDER BY recorded_at DESC
         LIMIT 1
     `;
