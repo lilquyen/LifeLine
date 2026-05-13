@@ -139,20 +139,6 @@ export const AssignmentCard: React.FC<AssignmentCardProps> = ({
                 <XCircle size={16} />
                 Hủy ca
               </button>
-              <input
-                value={completeNote}
-                onChange={(e) => setCompleteNote(e.target.value)}
-                placeholder="Ghi chu ket qua ho tro"
-                className="col-span-2 px-3 py-2 border rounded-lg text-sm"
-              />
-              <button
-                onClick={handleCompleteAssignment}
-                disabled={completing}
-                className="col-span-2 flex items-center justify-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50"
-              >
-                {completing ? <Loader2 size={16} className="animate-spin" /> : <Calendar size={16} />}
-                Hoan tat ca
-              </button>
             </>
           ) : assignment.assignment_status === 'cancelled' ? (
             /* Hiện trạng thái Đã hủy chiếm hết 2 cột còn lại của Grid */

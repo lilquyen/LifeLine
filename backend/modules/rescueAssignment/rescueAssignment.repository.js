@@ -2,25 +2,24 @@ const db = require('../../config/db');
 
 const createAssignment = async (postId, rescuerId) => {
     const query = `
-        INSERT INTO rescue_assignments (request_id, rescuer_id, assigned_at, response_seconds)
+        INSERT INTO rescue_assignments (
+            request_id,
+            rescuer_id,
+            assigned_at,
+            response_seconds
+        )
         VALUES (
             $1,
             $2,
             NOW(),
-            EXTRACT(EPOCH FROM (NOW() - (SELECT created_at FROM rescue_requests WHERE id = $1)))::int
+            EXTRACT(EPOCH FROM (
+                NOW() - (
+                    SELECT created_at 
+                    FROM rescue_requests 
+                    WHERE id = $1
+                )
+            ))::int
         )
-        ON CONFLICT (request_id) DO UPDATE
-        SET rescuer_id = EXCLUDED.rescuer_id,
-            assigned_at = NOW(),
-            status = 'accepted',
-            finished_at = NULL,
-            completion_note = NULL,
-            failure_reason = NULL,
-            victim_confirmed_at = NULL,
-            response_seconds = EXTRACT(EPOCH FROM (NOW() - (
-                SELECT created_at FROM rescue_requests WHERE id = $1
-            )))::int,
-            resolution_seconds = NULL
         RETURNING *;
     `;
 
@@ -28,7 +27,6 @@ const createAssignment = async (postId, rescuerId) => {
     return result.rows[0];
 }
 
-// check da co nguoi dang nhan cuu chua
 const findActiveAssignment = async (postId) => {
     const result = await db.query(`
         SELECT * FROM rescue_assignments
