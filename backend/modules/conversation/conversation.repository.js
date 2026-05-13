@@ -215,11 +215,24 @@ const getConversationById = async (conversationId) => {
   return result.rows[0];
 };
 
+const isConversationExistsByRequestIdRescuerId = async (requestId, rescuerId) => {
+  const result = await db.query(
+    `
+    SELECT id FROM conversations
+    WHERE request_id = $1 AND rescuer_id = $2 AND is_active = TRUE
+    `,
+    [requestId, rescuerId]
+  );
+
+  return result.rows[0]?.id || null;
+}
+
 
 module.exports = {
   createConversation,
   getConversationByRequestId,
   inactiveConversation,
   getMyConversations,
-  getConversationById
+  getConversationById,
+  isConversationExistsByRequestIdRescuerId
 };

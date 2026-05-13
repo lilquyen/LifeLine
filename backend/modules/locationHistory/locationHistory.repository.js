@@ -21,7 +21,10 @@ const getLocationHistory = async (requestId) => {
             ST_X(location) AS lng,
             recorded_at
         FROM location_history
+        JOIN rescue_assignments 
+        ON rescue_assignments.request_id = location_history.request_id
         WHERE request_id = $1
+        AND rescue_assignments.status = 'accepted'
         ORDER BY recorded_at ASC
     `;
 
@@ -37,7 +40,10 @@ const getLatestLocation = async (requestId) => {
             ST_X(location) AS lng,
             recorded_at
         FROM location_history
+        JOIN rescue_assignments 
+        ON rescue_assignments.request_id = location_history.request_id
         WHERE request_id = $1
+        AND rescue_assignments.status = 'accepted'
         ORDER BY recorded_at DESC
         LIMIT 1
     `;

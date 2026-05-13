@@ -43,7 +43,7 @@ export default function RescureLayout() {
           }
         >
           <Users size={20} />
-          Các ca cần cứu hộ
+          Các ca cứu hộ
         </NavLink>
 
         <NavLink 

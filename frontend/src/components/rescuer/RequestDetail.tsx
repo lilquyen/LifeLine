@@ -16,10 +16,9 @@ const defaultIcon = new L.Icon({
 interface RequestDetailModalProps {
   requestId: number | null;
   onClose: () => void;
-  onAccept: (requestId: number) => void;
 }
 
-export const RequestDetailModal: React.FC<RequestDetailModalProps> = ({ requestId, onClose, onAccept }) => {
+export const RequestDetail: React.FC<RequestDetailModalProps> = ({ requestId, onClose}) => {
   const [detail, setDetail] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
@@ -39,14 +38,6 @@ export const RequestDetailModal: React.FC<RequestDetailModalProps> = ({ requestI
     load();
   }, [requestId]);
 
-  const handleAccept = () => {
-    if (requestId) {
-      onAccept(requestId);
-      onClose(); // đóng modal chi tiết
-    }
-  };
-
-  if (!requestId) return null;
 
   const urgencyColor = (level: number) => {
     if (level >= 4) return 'text-red-600 bg-red-100';
@@ -123,16 +114,6 @@ export const RequestDetailModal: React.FC<RequestDetailModalProps> = ({ requestI
                     </div>
                   )}
                 </div>
-              </div>
-
-              {/* Nút nhận cứu hộ ở dưới cùng */}
-              <div className="pt-6 mt-6 border-t flex justify-end">
-                <button
-                  onClick={handleAccept}
-                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                >
-                  Nhận cứu hộ
-                </button>
               </div>
             </div>
           ) : (
