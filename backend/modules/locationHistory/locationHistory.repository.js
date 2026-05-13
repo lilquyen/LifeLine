@@ -16,33 +16,34 @@ const updateLocation = async (userId, requestId, lat, lng) => {
 const getLocationHistory = async (requestId) => {
     const query = `
         SELECT 
-            rescuer_id,
+            location_history.id,
+            rescue_assignments.rescuer_id,
             ST_Y(location) AS lat,
             ST_X(location) AS lng,
             recorded_at
         FROM location_history
         JOIN rescue_assignments 
         ON rescue_assignments.request_id = location_history.request_id
-        WHERE request_id = $1
+        WHERE location_history.request_id = $1
         AND rescue_assignments.status = 'accepted'
         ORDER BY recorded_at ASC
     `;
 
     const result = await db.query(query, [requestId]);
-    return result.rows[0];
+    return result.rows;
 }
 
 const getLatestLocation = async (requestId) => {
     const query = `
         SELECT 
-            rescuer_id,
+            rescue_assignments.rescuer_id,
             ST_Y(location) AS lat,
             ST_X(location) AS lng,
             recorded_at
         FROM location_history
         JOIN rescue_assignments 
         ON rescue_assignments.request_id = location_history.request_id
-        WHERE request_id = $1
+        WHERE location_history.request_id = $1
         AND rescue_assignments.status = 'accepted'
         ORDER BY recorded_at DESC
         LIMIT 1

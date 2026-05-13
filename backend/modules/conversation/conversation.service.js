@@ -16,7 +16,21 @@ const createConversation = async (data) => {
     );
 
     if (existingConversationId) {
+      await conversationRepository.activeConversation(existingConversationId);
       return await conversationRepository.getConversationById(existingConversationId);
+    }
+
+    const existingConversation =
+      await conversationRepository.findConversationByRequestId(
+        data.requestId
+      );
+
+    // Nếu đã có conversation active
+    // thì inactive conversation cũ
+    if (existingConversation) {
+      await conversationRepository.inactiveConversation(
+        existingConversation.id
+      );
     }
     
     const newConversation = await conversationRepository.createConversation(data);

@@ -64,11 +64,21 @@ const getVictimByPostId = async (postId) => {
     return rescuePostRepo.getUserIdByRequestId(postId);
 }
 
+const cancelRescueRequest = async (userId, requestId) => {
+    return rescuePostRepo.cancelRescueRequest(userId, requestId);
+}
+
+const updateRescueRequest = async (requestId, data) => {
+    return rescuePostRepo.updateRescueRequest(requestId, data);
+}
+
 module.exports = {
     createPost,
     getAllPosts,
     getPostById,
     getAllPostByUserId,
     getVictimByPostId,
-    getAllPendingPosts
+    getAllPendingPosts,
+    cancelRescueRequest,
+    updateRescueRequest
 }

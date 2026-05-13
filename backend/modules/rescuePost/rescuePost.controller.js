@@ -93,12 +93,92 @@ const getAllPostByUserId = async (req, res) => {
     }
 }
 
+const cancelRescueRequest = async (req, res) => {
+    try {
+        const postId = req.params.id;
+        const userId = req.user.id;
+        const post_userId = await service.getVictimByPostId(postId);
 
+        if (post_userId !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'You are not authorized to cancel this rescue request'
+            });
+        }
+
+        const result = await service.cancelRescueRequest(userId, postId);
+
+        res.json({
+            success: true,
+            message: 'Rescue request cancelled successfully',
+            data: result
+        });
+    } catch (err) {
+        console.log(err);
+
+        res.status(400).json({
+            success: false,
+            message: err.message
+        });
+    }
+}
+
+const updateRescueRequest = async (req, res) => {
+    try {
+        const postId = req.params.id;
+        const userId = req.user.id;
+
+        const post_userId = await service.getVictimByPostId(postId);
+
+        if (post_userId !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'You are not authorized to update this rescue request'
+            });
+        }
+        
+        const allowedUpdates = [
+            'title', 'description', 'urgency_level', 
+            'address', 'status', 'location'
+        ];
+        
+        const updateData = {};
+        for (const key of allowedUpdates) {
+            if (req.body[key] !== undefined) {
+                updateData[key] = req.body[key];
+            }
+        }
+
+        if (Object.keys(req.body).length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No data provided for update'
+            });
+        }
+
+        const result = await service.updateRescueRequest(postId, updateData);
+
+        res.json({
+            success: true,
+            message: 'Rescue request updated successfully',
+            data: result
+        });
+    } catch (err) {
+        console.log(err);
+
+        res.status(400).json({
+            success: false,
+            message: err.message
+        });
+    }
+}
 
 module.exports = {
     createPost,
     getAllPosts,
     getPostById,
     getAllPostByUserId,
-    getAllPendingPosts
+    getAllPendingPosts,
+    cancelRescueRequest,
+    updateRescueRequest
 }

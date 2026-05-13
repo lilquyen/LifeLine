@@ -109,6 +109,18 @@ const inactiveConversation = async (conversationId) => {
   return result.rowCount > 0;
 };
 
+const activeConversation = async (conversationId) => {
+  const query = `
+    UPDATE conversations
+    SET is_active = TRUE
+    WHERE id = $1
+  `;
+
+  const result = await db.query(query, [conversationId]);
+
+  return result.rowCount > 0;
+};
+
 const getMyConversations = async (userId) => {
 
   const result = await db.query(
@@ -234,5 +246,6 @@ module.exports = {
   inactiveConversation,
   getMyConversations,
   getConversationById,
-  isConversationExistsByRequestIdRescuerId
+  isConversationExistsByRequestIdRescuerId,
+  activeConversation
 };

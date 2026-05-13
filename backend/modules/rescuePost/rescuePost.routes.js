@@ -13,6 +13,8 @@ router.post('/post',
     controller.createPost
 );
 router.get('/pending', controller.getAllPendingPosts);
+router.put('/cancel/:id', auth, role(['victim']) , controller.cancelRescueRequest);
+router.put('/update/:id', auth, role(['victim']), controller.updateRescueRequest);
 router.get('/', controller.getAllPosts);
 router.get('/my-posts', auth, controller.getAllPostByUserId);
 router.get('/:id', controller.getPostById);
