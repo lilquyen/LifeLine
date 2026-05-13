@@ -11,6 +11,8 @@ interface Point {
 interface RescuerTrackingMapProps {
   victim?: Point | null;
   rescuer?: Point | null;
+  victimLabel?: string;
+  rescuerLabel?: string;
 }
 
 const trackingIcon = (label: string, color: string) => L.divIcon({
@@ -42,7 +44,12 @@ function FitMap({ victim, rescuer }: RescuerTrackingMapProps) {
   return null;
 }
 
-export function RescuerTrackingMap({ victim, rescuer }: RescuerTrackingMapProps) {
+export function RescuerTrackingMap({
+  victim,
+  rescuer,
+  victimLabel = 'NAN',
+  rescuerLabel = 'BAN',
+}: RescuerTrackingMapProps) {
   const [route, setRoute] = useState<Point[]>([]);
 
   useEffect(() => {
@@ -95,10 +102,10 @@ export function RescuerTrackingMap({ victim, rescuer }: RescuerTrackingMapProps)
       />
       <FitMap victim={victim} rescuer={rescuer} />
       {victim && (
-        <Marker position={[Number(victim.lat), Number(victim.lng)]} icon={trackingIcon('NAN', '#dc2626')} />
+        <Marker position={[Number(victim.lat), Number(victim.lng)]} icon={trackingIcon(victimLabel, '#dc2626')} />
       )}
       {rescuer && (
-        <Marker position={[Number(rescuer.lat), Number(rescuer.lng)]} icon={trackingIcon('BAN', '#2563eb')} />
+        <Marker position={[Number(rescuer.lat), Number(rescuer.lng)]} icon={trackingIcon(rescuerLabel, '#2563eb')} />
       )}
       {route.length > 0 ? (
         <Polyline

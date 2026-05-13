@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, Clock, MapPin, MessageSquare, Navigation, PhoneCall, Plus, Radio, Siren, UserRound } from 'lucide-react';
-import { MapContainer, Marker, Polyline, TileLayer, useMap } from 'react-leaflet';
-import L from 'leaflet';
+import { AlertTriangle, CheckCircle2, Clock, Loader2, MapPin, MessageSquare, Navigation, PhoneCall, Plus, Radio, Siren, UserRound } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import api from '../../services/api';
 import { connectSocket } from '../../services/socket';
+import { RescuerTrackingMap } from '../../components/rescuer/RescuerTrackingMap';
 
 interface RescuePost {
   id: number;
@@ -44,61 +43,61 @@ const estimateDistanceKm = (a?: any, b?: any) => {
   return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 };
 
-const markerIcon = (label: string, color: string) => L.divIcon({
-  className: 'victim-tracker-marker',
-  html: `<div style="width:34px;height:34px;border-radius:999px;background:${color};color:white;border:3px solid white;box-shadow:0 8px 20px rgba(15,23,42,.25);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;">${label}</div>`,
-  iconSize: [34, 34],
-  iconAnchor: [17, 17],
-});
-
-function FitTrackerMap({ victim, rescuer }: { victim: any; rescuer: any }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (victim && rescuer) {
-      map.fitBounds([[Number(victim.lat), Number(victim.lng)], [Number(rescuer.lat), Number(rescuer.lng)]], {
-        padding: [42, 42],
-        maxZoom: 15,
-      });
-    } else if (victim) {
-      map.setView([Number(victim.lat), Number(victim.lng)], 14);
-    }
-  }, [map, victim, rescuer]);
-
-  return null;
-}
-
 export default function VictimDashboard() {
   const [posts, setPosts] = useState<RescuePost[]>([]);
+  const [acceptedRequests, setAcceptedRequests] = useState<any[]>([]);
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
   const [dashboardCounts, setDashboardCounts] = useState<any>(null);
   const [latestStatus, setLatestStatus] = useState<any>(null);
   const [rescuerLocation, setRescuerLocation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [sendingSos, setSendingSos] = useState(false);
+  const [updatingVictimLocation, setUpdatingVictimLocation] = useState(false);
+
+  const fetchDashboard = useCallback(async (preferredRequestId?: number | null) => {
+    const res = await api.get('/rescue-posts/victim-dashboard');
+    const data = res.data.data;
+    const accepted = data.acceptedRequests || [];
+    const selected = preferredRequestId
+      ? accepted.find((request: any) => request.id === preferredRequestId)
+      : accepted[0] || null;
+
+    setPosts(data.recentRequests || []);
+    setAcceptedRequests(accepted);
+    setDashboardCounts(data.counts || null);
+    setLatestStatus(selected);
+    setSelectedRequestId(selected?.id || null);
+
+    if (selected?.rescuer_lat && selected?.rescuer_lng) {
+      setRescuerLocation({ lat: selected.rescuer_lat, lng: selected.rescuer_lng });
+    } else if (selected?.id && ['assigned', 'in_progress'].includes(selected.status)) {
+      const latestLocation = await api.get(`/locations/latest/${selected.id}`).catch(() => null);
+      setRescuerLocation(latestLocation?.data?.lat && latestLocation?.data?.lng ? latestLocation.data : null);
+    } else {
+      setRescuerLocation(null);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const res = await api.get('/rescue-posts/victim-dashboard');
-        const data = res.data.data;
-        setPosts(data.recentRequests || []);
-        setDashboardCounts(data.counts || null);
-        setLatestStatus(data.latestStatus || null);
-        if (data.latestStatus?.rescuer_lat && data.latestStatus?.rescuer_lng) {
-          setRescuerLocation({ lat: data.latestStatus.rescuer_lat, lng: data.latestStatus.rescuer_lng });
-        } else if (data.latestStatus?.id && ['assigned', 'in_progress'].includes(data.latestStatus.status)) {
-          const latestLocation = await api.get(`/locations/latest/${data.latestStatus.id}`).catch(() => null);
-          if (latestLocation?.data?.lat && latestLocation?.data?.lng) {
-            setRescuerLocation(latestLocation.data);
-          }
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchDashboard(null)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [fetchDashboard]);
 
-    fetchPosts().catch(console.error);
-  }, []);
+  useEffect(() => {
+    if (!selectedRequestId) return;
+    const selected = acceptedRequests.find(request => request.id === selectedRequestId);
+    if (!selected) return;
+
+    setLatestStatus(selected);
+    if (selected.rescuer_lat && selected.rescuer_lng) {
+      setRescuerLocation({ lat: selected.rescuer_lat, lng: selected.rescuer_lng });
+    } else {
+      api.get(`/locations/latest/${selected.id}`)
+        .then(res => setRescuerLocation(res.data?.lat && res.data?.lng ? res.data : null))
+        .catch(() => setRescuerLocation(null));
+    }
+  }, [acceptedRequests, selectedRequestId]);
 
   useEffect(() => {
     if (!latestStatus?.id) return;
@@ -129,10 +128,7 @@ export default function VictimDashboard() {
         formData.append('lat', pos.coords.latitude.toString());
         formData.append('lng', pos.coords.longitude.toString());
         await api.post('/rescue-posts/post', formData);
-        const res = await api.get('/rescue-posts/victim-dashboard');
-        setPosts(res.data.data.recentRequests || []);
-        setDashboardCounts(res.data.data.counts || null);
-        setLatestStatus(res.data.data.latestStatus || null);
+        await fetchDashboard(selectedRequestId);
       } catch (error) {
         console.error(error);
         alert('Gui SOS that bai');
@@ -151,8 +147,34 @@ export default function VictimDashboard() {
       rating: 5,
       feedback: 'Da duoc ho tro'
     });
-    const res = await api.get('/rescue-posts/victim-dashboard');
-    setLatestStatus(res.data.data.latestStatus || null);
+    await fetchDashboard(latestStatus.id);
+  };
+
+  const updateVictimLocation = () => {
+    if (!latestStatus?.id) return;
+    if (!navigator.geolocation) {
+      alert('Trinh duyet khong ho tro GPS');
+      return;
+    }
+
+    setUpdatingVictimLocation(true);
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        await api.put(`/rescue-posts/update/${latestStatus.id}`, {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+        await fetchDashboard(latestStatus.id);
+      } catch (error) {
+        console.error(error);
+        alert('Cap nhat vi tri that bai');
+      } finally {
+        setUpdatingVictimLocation(false);
+      }
+    }, () => {
+      setUpdatingVictimLocation(false);
+      alert('Khong lay duoc GPS');
+    });
   };
 
   const stats = useMemo(() => {
@@ -163,14 +185,15 @@ export default function VictimDashboard() {
       active: posts.filter(post => ['assigned', 'in_progress'].includes(post.status)).length,
       completed: posts.filter(post => post.status === 'completed').length,
     };
-  }, [posts]);
+  }, [dashboardCounts, posts]);
 
-  const latestPosts = posts.slice(0, 5);
+  const acceptedDisplay = acceptedRequests.slice(0, 5);
   const criticalPost = posts.find(post => post.status !== 'completed' && post.urgency_level >= 4);
   const activeTracking = latestStatus && ['assigned', 'in_progress'].includes(latestStatus.status);
   const victimPoint = latestStatus?.lat && latestStatus?.lng ? { lat: latestStatus.lat, lng: latestStatus.lng } : null;
   const distanceKm = estimateDistanceKm(rescuerLocation, latestStatus);
-  const etaMinutes = distanceKm ? Math.max(1, Math.round((distanceKm / 25) * 60)) : null;
+  const etaMinutes = distanceKm != null ? Math.max(1, Math.round((distanceKm / 25) * 60)) : null;
+  const distanceText = distanceKm != null ? `${Number(distanceKm).toFixed(1)} km` : null;
 
   return (
     <div className="min-h-full bg-slate-50 p-6">
@@ -275,7 +298,7 @@ export default function VictimDashboard() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <InfoPill icon={<PhoneCall size={16} />} label={latestStatus.rescuer_phone || 'Chua co so dien thoai'} />
-                    <InfoPill icon={<Navigation size={16} />} label={distanceKm ? `${distanceKm.toFixed(1)} km` : 'Dang cho vi tri'} />
+                    <InfoPill icon={<Navigation size={16} />} label={distanceText || 'Dang cho vi tri'} />
                     <InfoPill icon={<Clock size={16} />} label={etaMinutes ? `ETA ${etaMinutes} phut` : 'Chua tinh duoc ETA'} />
                     <InfoPill icon={<MapPin size={16} />} label={rescuerLocation ? `${Number(rescuerLocation.lat).toFixed(5)}, ${Number(rescuerLocation.lng).toFixed(5)}` : 'Chua co GPS rescuer'} />
                   </div>
@@ -298,34 +321,28 @@ export default function VictimDashboard() {
                   Xac nhan da duoc ho tro
                 </button>
               )}
+
+              {latestStatus && (
+                <button
+                  type="button"
+                  onClick={updateVictimLocation}
+                  disabled={updatingVictimLocation}
+                  className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold text-sm hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {updatingVictimLocation ? <Loader2 size={18} className="animate-spin" /> : <MapPin size={18} />}
+                  {updatingVictimLocation ? 'Dang cap nhat vi tri...' : 'Cap nhat vi tri cua toi'}
+                </button>
+              )}
             </div>
 
             <div className="min-h-[320px] border-t lg:border-t-0 lg:border-l border-slate-200">
               {victimPoint ? (
-                <MapContainer
-                  center={[Number(victimPoint.lat), Number(victimPoint.lng)]}
-                  zoom={14}
-                  style={{ height: '100%', minHeight: 320, width: '100%', zIndex: 1 }}
-                >
-                  <TileLayer
-                    attribution='&copy; OpenStreetMap contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <FitTrackerMap victim={victimPoint} rescuer={rescuerLocation} />
-                  <Marker position={[Number(victimPoint.lat), Number(victimPoint.lng)]} icon={markerIcon('BAN', '#dc2626')} />
-                  {rescuerLocation && (
-                    <>
-                      <Marker position={[Number(rescuerLocation.lat), Number(rescuerLocation.lng)]} icon={markerIcon('R', '#2563eb')} />
-                      <Polyline
-                        positions={[
-                          [Number(victimPoint.lat), Number(victimPoint.lng)],
-                          [Number(rescuerLocation.lat), Number(rescuerLocation.lng)],
-                        ]}
-                        pathOptions={{ color: '#2563eb', weight: 4, dashArray: '8 8' }}
-                      />
-                    </>
-                  )}
-                </MapContainer>
+                <RescuerTrackingMap
+                  victim={victimPoint}
+                  rescuer={rescuerLocation}
+                  victimLabel="BAN"
+                  rescuerLabel="R"
+                />
               ) : (
                 <div className="h-full min-h-[320px] flex items-center justify-center text-sm text-slate-500">
                   Chua co toa do ca cuu ho de hien ban do.
@@ -339,8 +356,8 @@ export default function VictimDashboard() {
           <section className="lg:col-span-2 bg-white border border-slate-200 rounded-lg">
             <div className="p-5 border-b flex items-center justify-between">
               <div>
-                <h2 className="font-bold text-slate-900">Yeu cau gan day</h2>
-                <p className="text-sm text-slate-500">Cap nhat theo trang thai moi nhat trong he thong.</p>
+                <h2 className="font-bold text-slate-900">Yeu cau da tiep nhan</h2>
+                <p className="text-sm text-slate-500">Chon tung yeu cau de xem ban do va thong tin nguoi cuu ho.</p>
               </div>
               <Link to="/victim/my-posts" className="text-sm font-semibold text-red-600 hover:text-red-700">
                 Xem tat ca
@@ -350,16 +367,17 @@ export default function VictimDashboard() {
             <div className="divide-y">
               {loading ? (
                 <div className="p-6 text-center text-slate-500">Dang tai du lieu...</div>
-              ) : latestPosts.length === 0 ? (
+              ) : acceptedDisplay.length === 0 ? (
                 <div className="p-8 text-center text-slate-500">
-                  Ban chua co yeu cau nao. Hay tao yeu cau dau tien khi can ho tro.
+                  Chua co yeu cau nao duoc nguoi cuu ho tiep nhan.
                 </div>
               ) : (
-                latestPosts.map(post => (
-                  <Link
+                acceptedDisplay.map(post => (
+                  <button
                     key={post.id}
-                    to="/victim/my-posts"
-                    className="block p-5 hover:bg-slate-50 transition"
+                    type="button"
+                    onClick={() => setSelectedRequestId(post.id)}
+                    className={`block w-full p-5 text-left transition ${selectedRequestId === post.id ? 'bg-red-50' : 'hover:bg-slate-50'}`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
@@ -372,13 +390,13 @@ export default function VictimDashboard() {
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusStyles[post.status]}`}>
-                          {statusLabels[post.status]}
+                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusStyles[post.status as RescuePost['status']] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                          {statusLabels[post.status as RescuePost['status']] || post.status}
                         </span>
                         <span className="text-xs text-slate-500">Muc {post.urgency_level}</span>
                       </div>
                     </div>
-                  </Link>
+                  </button>
                 ))
               )}
             </div>
@@ -430,7 +448,7 @@ export default function VictimDashboard() {
                 <div className="flex items-center gap-2 text-slate-700"><UserRound size={18} /> {latestStatus.rescuer_name}</div>
                 <div className="flex items-center gap-2 text-slate-700"><Radio size={18} /> {latestStatus.rescuer_phone || 'Chua co SĐT'}</div>
                 <div className="flex items-center gap-2 text-slate-700"><MapPin size={18} /> {rescuerLocation ? `${Number(rescuerLocation.lat).toFixed(5)}, ${Number(rescuerLocation.lng).toFixed(5)}` : 'Dang cho vi tri rescuer'}</div>
-                <div className="flex items-center gap-2 text-slate-700"><Clock size={18} /> {distanceKm ? `${distanceKm.toFixed(1)} km - ETA ${etaMinutes} phut` : 'Chua tinh duoc ETA'}</div>
+                <div className="flex items-center gap-2 text-slate-700"><Clock size={18} /> {distanceText ? `${distanceText} - ETA ${etaMinutes} phut` : 'Chua tinh duoc ETA'}</div>
               </div>
             )}
             {latestStatus.status === 'completed' && !latestStatus.victim_confirmed_at && (
