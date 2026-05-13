@@ -136,7 +136,7 @@ export default function VictimDashboard() {
         setLatestStatus(res.data.data.latestStatus);
 
       } catch (error) {
-        console.error(error);
+        console.error(error); 
         alert('Gửi SOS thất bại');
       } finally {
         setSendingSos(false);
