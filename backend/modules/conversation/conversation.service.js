@@ -21,7 +21,7 @@ const createConversation = async (data) => {
     }
 
     const existingConversation =
-      await conversationRepository.findConversationByRequestId(
+      await conversationRepository.getConversationByRequestId(
         data.requestId
       );
 

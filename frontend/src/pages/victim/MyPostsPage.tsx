@@ -1,32 +1,61 @@
-import React, { useEffect, useState } from 'react';
+// src/pages/victim/MyPostsPage.tsx
+import React, { useEffect, useState, useRef } from 'react';
 import api from '../../services/api';
 import MyPostCard from '../../components/victim/MyPostCard';
+import UpdatePostModal from '../../components/victim/UpdatePostModal';
 import { GoogleMapsComponent } from '../../components/LeafletComponent';
 import ChatWindow from '../../components/chat/ChatWindow';
-
-// 1. Định nghĩa Interface cho Incident trên bản đồ
-export interface IncidentMapItem {
-  id: string;
-  type: string;
-  level: 1 | 2 | 3 | 4 | 5;
-  location: string;
-  lat: number;
-  lng: number;
-  timestamp: string;
-  status: 'active' | 'resolved';
-}
+import toast, { Toaster } from 'react-hot-toast';
 
 const MyPostsPage = () => {
   const [posts, setPosts] = useState<any[]>([]);
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [loadingChat, setLoadingChat] = useState(false);
 
-  // 2. State dành riêng cho bản đồ để đảm bảo không truyền NaN
-  const [mapAssets, setMapAssets] = useState<any[]>([]);
-  const [mapIncidents, setMapIncidents] = useState<IncidentMapItem[]>([]);
+  // Dữ liệu bản đồ
+  const [victimLocation, setVictimLocation] = useState<any>(null);
+  const [rescuerLocations, setRescuerLocations] = useState<any[]>([]);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
   const [activeConversation, setActiveConversation] = useState<any>(null);
-  const [loadingChat, setLoadingChat] = useState(false);
+
+  useEffect(() => { 
+    fetchMyPosts(); 
+  }, []);
+
+  // Lấy lịch sử vị trí Rescuer khi chọn bài đã được nhận
+  useEffect(() => {
+    if (selectedPost && selectedPost.status !== 'pending') {
+      fetchRescuerHistory(selectedPost.id);
+      
+      // Chỉ polling khi status là 'assigned' (đang hoạt động)
+      if (selectedPost.status === 'assigned') {
+        const interval = setInterval(() => {
+          fetchRescuerHistory(selectedPost.id);
+        }, 20000);
+        
+        setPollingInterval(interval);
+        
+        return () => {
+          if (interval) clearInterval(interval);
+        };
+      } else {
+        // Nếu là completed hoặc cancelled, không polling
+        if (pollingInterval) {
+          clearInterval(pollingInterval);
+          setPollingInterval(null);
+        }
+      }
+    } else {
+      setRescuerLocations([]);
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        setPollingInterval(null);
+      }
+    }
+  }, [selectedPost]);
 
   useEffect(() => {
     fetchMyPosts();
@@ -57,163 +86,220 @@ const MyPostsPage = () => {
     getConversationByRequest();
   }, [selectedPost]);
 
-  // 3. Cập nhật mapIncidents mỗi khi selectedPost thay đổi
-  useEffect(() => {
-    if (selectedPost && selectedPost.lat && selectedPost.lng) {
-      const mapped: IncidentMapItem = {
-        id: selectedPost.id.toString(),
-        type: selectedPost.title || 'Yêu cầu cứu hộ',
-        level: Number(selectedPost.urgency_level) as 1 | 2 | 3 | 4 | 5 || 2,
-        location: selectedPost.address || 'Chưa xác định',
-        lat: Number(selectedPost.lat) || 10.7769, // Ép kiểu số cực kỳ quan trọng
-        lng: Number(selectedPost.lng) || 106.7009,
-        timestamp: new Date(selectedPost.created_at).toLocaleString('vi-VN'),
-        status: selectedPost.status === 'pending' ? 'active' : 'resolved'
-      };
-      setMapIncidents([mapped]);
-
-
-    } else {
-      setMapIncidents([]);
-    }
-  }, [selectedPost]);
-
   const fetchMyPosts = async () => {
     try {
       const response = await api.get('/rescue-posts/my-posts');
-      const dbData = response.data.data;
-  
-      if (Array.isArray(dbData) && dbData.length > 0) {
-        setPosts(dbData);
-        
-        // Chọn bài đầu tiên ngay lập tức
-        const firstPost = dbData[0];
-        setSelectedPost(firstPost);
-
-        console.log("Dữ liệu bài đăng đầu tiên:", firstPost);
-  
-        // "Mồi" dữ liệu bản đồ ngay tại đây để tránh chờ useEffect
-        if (firstPost.lat && firstPost.lng) {
-          setMapIncidents([{
-            id: firstPost.id.toString(),
-            type: firstPost.title,
-            level: Number(firstPost.urgency_level) as 1|2|3|4|5,
-            location: firstPost.address,
-            lat: Number(firstPost.lat),
-            lng: Number(firstPost.lng),
-            timestamp: new Date(firstPost.created_at).toLocaleString('vi-VN'),
-            status: 'active'
-          }]);
-        }
-      }
-    } catch (error) {
-      console.error("Lỗi:", error);
-    } finally {
-      setLoading(false);
+      const data = response.data.data;
+      setPosts(data);
+      if (data.length > 0 && !selectedPost) setSelectedPost(data[0]);
+    } catch (err) { 
+      toast.error("Lỗi tải danh sách bài viết"); 
+    } finally { 
+      setLoading(false); 
     }
   };
 
-  if (loading) return <div className="p-10 text-center font-bold text-red-600">Đang tải dữ liệu...</div>;
+  const fetchRescuerHistory = async (requestId: number) => {
+    try {
+      const res = await api.get(`/locations/history/${requestId}`);
+      // Sắp xếp theo thời gian tăng dần để vẽ đường đi
+      const sortedLocations = (res.data || []).sort((a: any, b: any) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+      setRescuerLocations(sortedLocations);
+    } catch (err) { 
+      console.error("Không lấy được vị trí người cứu hộ"); 
+    }
+  };
+
+  const handleCancel = async (id: number) => {
+    if (!window.confirm("Bạn chắc chắn muốn hủy yêu cầu này?")) return;
+    try {
+      await api.put(`/rescue-posts/cancel/${id}`);
+      toast.success("Đã hủy yêu cầu");
+      fetchMyPosts();
+    } catch (err) { 
+      toast.error("Lỗi khi hủy yêu cầu"); 
+    }
+  };
+
+  const handleComplete = async (id: number) => {
+    if (!window.confirm("Xác nhận hoàn thành yêu cầu này?")) return;
+    try {
+      await api.put(`/rescue-posts/complete/${id}`);
+      toast.success("Yêu cầu đã hoàn thành!");
+      fetchMyPosts();
+    } catch (err) { 
+      toast.error("Lỗi khi cập nhật trạng thái"); 
+    }
+  };
+
+  const handleUpdateConfirm = async (updateData: any) => {
+    try {
+      await api.put(`/rescue-posts/update/${selectedPost.id}`, updateData);
+      toast.success("Cập nhật thành công");
+      setIsUpdateModalOpen(false);
+      fetchMyPosts();
+    } catch (err) { 
+      toast.error("Cập nhật thất bại"); 
+    }
+  };
+
+  // Chuẩn bị dữ liệu cho bản đồ (bao gồm cả đường đi)
+  const getMapData = () => {
+    if (!selectedPost) return { incidents: [], route: [] };
+    
+    // Điểm của nạn nhân
+    const victimPoint = {
+      id: `victim-${selectedPost.id}`,
+      type: 'victim',
+      title: selectedPost.title,
+      lat: Number(selectedPost.lat),
+      lng: Number(selectedPost.lng),
+      level: selectedPost.urgency_level as 1 | 2 | 3 | 4 | 5,
+      status: 'victim' as 'victim'
+    };
+
+    // Các điểm vị trí của rescuer
+    const rescuerPoints = rescuerLocations.map((loc, index) => ({
+      id: `rescuer-${loc.id || index}`,
+      type: 'rescuer',
+      title: index === rescuerLocations.length - 1 ? 'Vị trí hiện tại của cứu hộ viên' : `Vị trí lúc ${new Date(loc.created_at).toLocaleTimeString('vi-VN')}`,
+      lat: Number(loc.lat),
+      lng: Number(loc.lng),
+      level: 1 as 1 | 2 | 3 | 4 | 5,
+      status: 'rescuer' as 'rescuer',
+      timestamp: loc.created_at
+    }));
+
+    // Đường đi (các điểm theo thứ tự thời gian)
+    const routePoints = rescuerLocations.map(loc => ({
+      lat: Number(loc.lat),
+      lng: Number(loc.lng)
+    }));
+
+    return {
+      incidents: [victimPoint, ...rescuerPoints],
+      route: routePoints
+    };
+  };
+
+  const mapData = getMapData();
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
+    <div className="flex h-screen bg-white">
+      <Toaster />
       
-      {/* NỬA TRÁI: DANH SÁCH BÀI VIẾT (40%) */}
-      <div className="w-2/5 border-r flex flex-col h-full bg-gray-50 shadow-inner">
-        <div className="p-5 bg-white border-b">
-          <h1 className="text-xl font-black text-red-600 uppercase tracking-tight">
-            Yêu cầu của tôi ({posts.length})
-          </h1>
+      {/* NỬA TRÁI - Danh sách bài đăng */}
+      <div className="w-2/5 border-r flex flex-col bg-gray-50">
+        <div className="p-4 bg-white border-b font-bold text-red-600 uppercase">
+          Yêu cầu của tôi ({posts.length})
         </div>
-        
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {posts.length > 0 ? (
-            posts.map((post) => (
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {loading ? (
+            <div className="text-center text-gray-400">Đang tải...</div>
+          ) : posts.length === 0 ? (
+            <div className="text-center text-gray-400">Bạn chưa có yêu cầu nào</div>
+          ) : (
+            posts.map(post => (
               <div 
                 key={post.id} 
-                onClick={() => setSelectedPost(post)}
-                className={`transition-all duration-300 transform ${
-                  selectedPost?.id === post.id 
-                  ? 'scale-[1.02] ring-2 ring-red-500 rounded-lg shadow-lg' 
-                  : 'hover:scale-[1.01]'
-                }`}
+                onClick={() => setSelectedPost(post)} 
+                className={`cursor-pointer transition-all ${selectedPost?.id === post.id ? 'ring-2 ring-red-400 rounded-lg' : 'opacity-80 hover:opacity-100'}`}
               >
-                <MyPostCard post={post} />
+                <MyPostCard 
+                  post={post} 
+                  onCancel={handleCancel}
+                  onComplete={handleComplete}
+                  onUpdate={() => setIsUpdateModalOpen(true)}
+                />
               </div>
             ))
-          ) : (
-            <div className="text-center py-20 text-gray-400">Bạn chưa có bài đăng nào</div>
           )}
         </div>
       </div>
-
-      {/* NỬA PHẢI: BẢN ĐỒ (TRÊN) & CHAT (DƯỚI) (60%) */}
+      
+      {/* NỬA PHẢI: BẢN ĐỒ (TRÊN) & CHAT (DƯỚI) */}
       <div className="w-3/5 flex flex-col h-full">
         
-        {/* PHẦN TRÊN: BẢN ĐỒ */}
-          <div className="flex-[4] relative bg-slate-100">
-            {/* Kiểm tra trực tiếp selectedPost có tọa độ không */}
-            {selectedPost && selectedPost.lat && selectedPost.lng ? (
-              <GoogleMapsComponent 
-                // KEY QUAN TRỌNG: Buộc bản đồ vẽ lại khi đổi bài
-                key={`map-${selectedPost.id}`} 
-                assets={mapAssets} // mapAssets khai báo là [] ở trên
-                incidents={mapIncidents} 
-                onIncidentClick={() => {}} 
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-gray-500 italic bg-gray-100">
-                <div className="animate-bounce mb-2">📍</div>
-                <p>{loading ? "Đang tải dữ liệu..." : "Vị trí không khả dụng hoặc chưa chọn bài"}</p>
-              </div>
-            )}
-            
-            {/* Badge trạng thái */}
-            {selectedPost && (
-              <div className="absolute top-4 right-4 z-[1000] bg-white px-4 py-2 rounded-full shadow-md border border-red-100 font-bold">
-                {selectedPost.status.toUpperCase()}
-              </div>
-            )}
-          </div>
+        {/* PHẦN TRÊN: BẢN ĐỒ (60%) */}
+        <div className="h-[60%] border-b relative bg-slate-100">
+          {selectedPost && selectedPost.lat && selectedPost.lng ? (
+            <GoogleMapsComponent 
+            key={`map-${selectedPost.id}-${rescuerLocations.length}`}
+            incidents={mapData.incidents}
+            route={mapData.route}
+            onIncidentClick={(incident) => console.log('Clicked:', incident)}
+          />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-gray-500 italic bg-gray-100">
+              <div className="animate-bounce mb-2">📍</div>
+              <p>{loading ? "Đang tải dữ liệu..." : "Vị trí không khả dụng hoặc chưa chọn bài"}</p>
+            </div>
+          )}
+          
+          
+          {/* Hiển thị thông tin rescuer */}
+          {rescuerLocations.length > 0 && (
+            <div className="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-md text-xs">
+              <span className="font-semibold text-green-600">🚑 Cứu hộ viên:</span>
+              <span className="ml-1 text-gray-600">
+                {rescuerLocations.length} vị trí đã ghi nhận
+              </span>
+            </div>
+          )}
+        </div>
 
-        {/* PHẦN DƯỚI: KHUNG CHAT */}
-        <div className="h-1/2 flex flex-col bg-white overflow-hidden border-t">
+        {/* PHẦN DƯỚI: KHUNG CHAT (40%) */}
+        <div className="h-[60%] flex flex-col bg-white overflow-hidden border-t">
           {selectedPost?.status === 'pending' ? (
-            /* 1. Trạng thái Đang chờ (Chưa có ai nhận) */
+            /* Trạng thái Đang chờ */
             <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
-              <div className="text-5xl mb-4 animate-bounce">📡</div>
+              <div className="text-5xl mb-4 animate-pulse">📡</div>
               <h2 className="text-xl font-bold text-gray-700">Đang tìm người hỗ trợ...</h2>
               <p className="text-sm text-gray-500 mt-2">Hệ thống chat sẽ mở khi có người tiếp nhận.</p>
             </div>
           ) : loadingChat ? (
-            /* 2. Trạng thái đang tải dữ liệu hội thoại */
+            /* Đang tải */
             <div className="flex-1 flex items-center justify-center text-gray-400 italic">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500 mr-2"></div>
               Đang kết nối hội thoại...
             </div>
           ) : activeConversation ? (
-            /* 3. Đã tìm thấy hội thoại -> Hiển thị ChatWindow */
+            /* Có hội thoại */
             <div className="flex-1 overflow-hidden">
               <ChatWindow 
-                key={activeConversation.id} // Dùng ID của hội thoại làm key
+                key={activeConversation.id}
                 conversationId={activeConversation.id}
                 conversationTitle={activeConversation.other_user_name}
                 conversationAvatar={activeConversation.other_user_avatar}
                 conversationPhone={activeConversation.other_user_phone}
               />
             </div>
-          ) : selectedPost ? (
-            /* 4. Đã nhận nhưng không lấy được hội thoại (Lỗi hoặc chưa khởi tạo) */
+          ) : selectedPost && selectedPost.status !== 'pending' ? (
+            /* Đã nhận nhưng lỗi */
             <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-6 text-center">
+              <div className="text-4xl mb-2">⚠️</div>
               <p className="text-sm">Không thể kết nối với người dùng này.</p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="mt-3 text-xs text-red-500 hover:underline"
+              >
+                Thử lại
+              </button>
             </div>
-          ) : (
-            /* 5. Chưa chọn bài đăng nào */
-            <div className="flex-1 flex items-center justify-center text-gray-400 bg-gray-50">
-              Chọn một yêu cầu để xem tin nhắn
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
+
+      {/* Modal cập nhật */}
+      {isUpdateModalOpen && (
+        <UpdatePostModal 
+          post={selectedPost} 
+          onClose={() => setIsUpdateModalOpen(false)} 
+          onConfirm={handleUpdateConfirm}
+        />
+      )}
     </div>
   );
 };

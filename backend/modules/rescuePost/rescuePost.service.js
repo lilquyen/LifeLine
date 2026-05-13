@@ -72,6 +72,10 @@ const updateRescueRequest = async (requestId, data) => {
     return rescuePostRepo.updateRescueRequest(requestId, data);
 }
 
+const completeRescueRequest = async (userId, requestId) => {
+    return rescuePostRepo.completeRescueRequest(userId, requestId);
+}
+
 module.exports = {
     createPost,
     getAllPosts,
@@ -80,5 +84,6 @@ module.exports = {
     getVictimByPostId,
     getAllPendingPosts,
     cancelRescueRequest,
-    updateRescueRequest
+    updateRescueRequest,
+    completeRescueRequest
 }
