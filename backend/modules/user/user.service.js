@@ -69,7 +69,19 @@ const updateLocation = async (userId, lat, lng) => {
 }
 
 const updateProfile = async (userId, data) => {
-    return repo.updateProfile(userId, data);
+    const allowedData = {};
+
+    if (typeof data.full_name === 'string') {
+        allowedData.full_name = data.full_name;
+    }
+    if (data.phone === null || typeof data.phone === 'string') {
+        allowedData.phone = data.phone;
+    }
+    if (data.avatar_url === null || typeof data.avatar_url === 'string') {
+        allowedData.avatar_url = data.avatar_url;
+    }
+
+    return repo.updateProfile(userId, allowedData);
 }
 
 const listUsers = async (filters) => {

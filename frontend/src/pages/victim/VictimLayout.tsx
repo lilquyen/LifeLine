@@ -55,6 +55,14 @@ export default function VictimLayout() {
             >
               Nhắn tin
             </NavLink>
+            <NavLink
+              to="/victim/profile"
+              className={({ isActive }) =>
+                `text-sm font-medium ${isActive ? 'text-red-600' : 'text-gray-600 hover:text-red-600'}`
+              }
+            >
+              Hồ sơ
+            </NavLink>
           </div>
 
           <div className="flex items-center gap-3">
