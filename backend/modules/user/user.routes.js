@@ -5,7 +5,14 @@ const controller = require('./user.controller');
 const auth = require('../../common/middleware/auth.middleware');
 const role = require('../../common/middleware/role.middleware');
 const upload = require('../../common/middleware/upload.middleware');
-const rateLimit = require('../../common/middleware/rateLimit.middleware');
+const rateLimit = require('express-rate-limit');
+
+const avatarLimiter = rateLimit({
+    windowMs: 60000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false
+});
 
 router.post('/register', controller.register);
 router.post('/login', controller.login);
@@ -15,7 +22,7 @@ router.put('/me', auth, controller.updateProfile);
 router.post(
     '/me/avatar',
     auth,
-    rateLimit({ windowMs: 60000, max: 5, keyGenerator: (req) => req.user?.id || req.ip }),
+    avatarLimiter,
     upload.single('image'),
     controller.uploadAvatar
 );

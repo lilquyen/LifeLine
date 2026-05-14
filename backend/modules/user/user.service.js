@@ -74,10 +74,10 @@ const updateProfile = async (userId, data) => {
     if (typeof data.full_name === 'string') {
         allowedData.full_name = data.full_name;
     }
-    if (typeof data.phone === 'string') {
+    if (data.phone === null || typeof data.phone === 'string') {
         allowedData.phone = data.phone;
     }
-    if (typeof data.avatar_url === 'string') {
+    if (data.avatar_url === null || typeof data.avatar_url === 'string') {
         allowedData.avatar_url = data.avatar_url;
     }
 
