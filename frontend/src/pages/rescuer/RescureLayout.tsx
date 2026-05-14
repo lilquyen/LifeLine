@@ -1,13 +1,15 @@
-import React from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { NavLink } from 'react-router-dom'; // Đổi từ Link sang NavLink
-import { History, MessageSquare, Map, Users, LogOut, ShieldAlert } from 'lucide-react';
+import { Outlet, useNavigate, NavLink } from 'react-router-dom';
+import { History, MessageSquare, Map, Users, LogOut, ShieldAlert, User } from 'lucide-react';
 import NotificationBell from '../../components/NotificationBell';
+import useAuthStore from '../../stores/authStore';
+import React from 'react';
 
 export default function RescureLayout() {
   const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
+
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    logout();
     navigate('/login');
   };
 
@@ -74,6 +76,20 @@ export default function RescureLayout() {
           <MessageSquare size={20} />
           Nhắn tin
         </NavLink>
+
+        <NavLink
+          to="/rescuer/profile"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+              isActive
+                ? 'bg-red-600 text-white shadow-md shadow-red-900/20'
+                : 'text-gray-300 hover:bg-slate-800 hover:text-white'
+            }`
+          }
+        >
+          <User size={20} />
+          Hồ sơ
+        </NavLink>
         </nav>
         <div className="p-4 border-t border-slate-800">
           <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-red-400 hover:bg-slate-800 hover:text-red-300 transition-colors">
@@ -88,6 +104,7 @@ export default function RescureLayout() {
             <NotificationBell />
             <div className="flex items-center gap-3 border-l pl-5">
               <div className="w-9 h-9 bg-slate-800 text-white flex items-center justify-center rounded-full font-bold shadow">TN</div>
+              <div className="text-sm text-slate-700">{user?.full_name || user?.username}</div>
             </div>
           </div>
         </header>

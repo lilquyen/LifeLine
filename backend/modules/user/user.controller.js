@@ -1,4 +1,6 @@
 const service = require('./user.service');
+const uploadImages = require('../../common/services/uploadImage.service').uploadImages; 
+const db = require('../../config/db');
 
 const register = async (req, res) => {
     try {
@@ -42,6 +44,25 @@ const getMe = async (req, res) => {
       });
     }
 };
+
+const updateAvatar = async (req, res) => {
+    try {
+        console.log('Received file:', req.file); // Debug log to check the uploaded file
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No image file provided' });
+      }
+      const urls = await uploadImages([req.file]);
+      const avatarUrl = urls[0];
+      
+      const userId = req.user.id;
+      await db.query('UPDATE users SET avatar_url = $1 WHERE id = $2', [avatarUrl, userId]);
+      
+      res.json({ success: true, url: avatarUrl });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: 'Upload failed' });
+    }
+  };
 
 const updateLocation = async (req, res) => {
     try {
@@ -95,5 +116,6 @@ module.exports = {
     updateLocation,
     updateProfile,
     listUsers,
-    setActive
+    setActive,
+    updateAvatar
 }

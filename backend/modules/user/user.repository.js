@@ -41,7 +41,10 @@ const findByPhone = async (phone) => {
 
 const findById = async (id) => {
     const result = await db.query(
-        'SELECT * FROM users WHERE id = $1',
+        `SELECT id, username, phone, full_name, role, avatar_url, is_active,
+                last_seen_at, created_at
+         FROM users
+         WHERE id = $1`,
         [id] 
     );
 
@@ -99,21 +102,15 @@ const updateProfile = async (userId, data) => {
         SET full_name = COALESCE($2, full_name),
             phone = COALESCE($3, phone),
             avatar_url = COALESCE($4, avatar_url),
-            is_active = COALESCE($5, is_active),
-            rescuer_skills = COALESCE($6, rescuer_skills),
-            vehicle_info = COALESCE($7, vehicle_info),
             last_seen_at = NOW()
         WHERE id = $1
         RETURNING id, username, phone, full_name, role, avatar_url, is_active,
-                  rescuer_skills, vehicle_info, last_seen_at, created_at
+                  last_seen_at, created_at
     `, [
         userId,
-        data.full_name || null,
-        data.phone || null,
-        data.avatar_url || null,
-        typeof data.is_active === 'boolean' ? data.is_active : null,
-        Array.isArray(data.rescuer_skills) ? data.rescuer_skills : null,
-        data.vehicle_info || null
+        data.full_name ?? null,
+        data.phone ?? null,
+        data.avatar_url ?? null
     ]);
 
     return result.rows[0];
