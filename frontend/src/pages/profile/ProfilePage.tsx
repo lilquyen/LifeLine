@@ -116,7 +116,7 @@ export default function ProfilePage() {
       const payload = {
         full_name: form.full_name,
         phone: form.phone,
-        avatar_url: form.avatar_url ? form.avatar_url : null
+        avatar_url: form.avatar_url || null
       };
 
       const res = await api.put('/auth/me', payload);
