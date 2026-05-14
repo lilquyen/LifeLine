@@ -15,6 +15,7 @@ import RescuerAssignmentHistory from './pages/rescuer/RescuerAssignmentHistory';
 
 import ConversationsPage from './pages/chat/MessagePage';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import ProfilePage from './pages/profile/ProfilePage';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
           <Route path="dashboard" element={<VictimDashboard />} />
           <Route path="create-request" element={<CreateRequest />} />
           <Route path="my-posts" element={<MyPostsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="conversations" element={<ConversationsPage />} />
           <Route path="conversations/:conversationId" element={<ConversationsPage />} />
         </Route>
@@ -62,6 +64,7 @@ function App() {
           <Route path="dashboard" element={<RescuerDashboard />} />
           <Route path="assignments" element={<RescuerAssignments />} />
           <Route path="assignment-history" element={<RescuerAssignmentHistory />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="conversations" element={<ConversationsPage />} />
           <Route path="conversations/:conversationId" element={<ConversationsPage />} />
         </Route>
