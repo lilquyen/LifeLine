@@ -50,13 +50,14 @@ export default function AdminDashboard() {
   const loadTopRescuers = async () => {
     try {
       const res = await api.get('/stats/top-rescuers');
-      setTopRescuers(res.data.data || []);
-      while (topRescuers.length < 3) {
-        topRescuers.push({ full_name: 'Chưa có dữ liệu', completed_count: 0, placeholder: true });
+      let data = res.data.data || [];
+      while (data.length < 3) {
+        data.push({ id: null, full_name: 'Chưa có dữ liệu', completed_count: 0, placeholder: true });
       }
-      setTopRescuers([...topRescuers]);
+      setTopRescuers(data);
     } catch (err) {
       console.error('Lỗi tải top rescuers', err);
+      setTopRescuers([]);
     }
   };
 
