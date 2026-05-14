@@ -1,4 +1,5 @@
 const service = require('./user.service');
+const imageService = require('../../common/services/uploadImage.service');
 
 const register = async (req, res) => {
     try {
@@ -70,6 +71,19 @@ const updateProfile = async (req, res) => {
     }
 }
 
+const uploadAvatar = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No image provided' });
+        }
+
+        const [url] = await imageService.uploadImages([req.file]);
+        return res.json({ success: true, url });
+    } catch (err) {
+        return res.status(400).json({ success: false, message: err.message });
+    }
+}
+
 const listUsers = async (req, res) => {
     try {
         const users = await service.listUsers(req.query);
@@ -94,6 +108,7 @@ module.exports = {
     getMe,
     updateLocation,
     updateProfile,
+    uploadAvatar,
     listUsers,
     setActive
 }
