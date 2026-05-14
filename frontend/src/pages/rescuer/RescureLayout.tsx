@@ -2,6 +2,7 @@ import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { History, MessageSquare, Map, Users, LogOut, ShieldAlert, User } from 'lucide-react';
 import NotificationBell from '../../components/NotificationBell';
 import useAuthStore from '../../stores/authStore';
+import React from 'react';
 
 export default function RescureLayout() {
   const navigate = useNavigate();
