@@ -115,8 +115,8 @@ export default function ProfilePage() {
     try {
       const payload = {
         full_name: form.full_name,
-        phone: form.phone,
-        avatar_url: form.avatar_url || null
+        phone: form.phone === '' ? null : form.phone,
+        avatar_url: form.avatar_url === '' ? null : form.avatar_url
       };
 
       const res = await api.put('/auth/me', payload);
@@ -184,7 +184,7 @@ export default function ProfilePage() {
             />
           ) : (
             <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
-              No Avatar
+              Không có ảnh đại diện
             </div>
           )}
 
