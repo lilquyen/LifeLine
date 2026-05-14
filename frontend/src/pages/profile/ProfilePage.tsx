@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import useAuthStore from '../../stores/authStore';
 
@@ -7,11 +7,12 @@ interface ProfileData {
   username: string;
   role: 'victim' | 'rescuer' | 'admin';
   full_name: string;
-  phone: string;
+  phone?: string | null;
   avatar_url?: string | null;
 }
 
-const normalizeProfile = (payload: any): ProfileData => payload?.data ?? payload;
+const normalizeProfile = (payload: ProfileData | { data: ProfileData }): ProfileData =>
+  'data' in payload ? payload.data : payload;
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuthStore();
@@ -36,7 +37,7 @@ export default function ProfilePage() {
         setProfile(data);
         setForm({
           full_name: data?.full_name || '',
-          phone: data?.phone || '',
+          phone: data?.phone ?? '',
           avatar_url: data?.avatar_url || ''
         });
       } catch (err: any) {
@@ -71,7 +72,7 @@ export default function ProfilePage() {
       setProfile(updated);
       setForm({
         full_name: updated?.full_name || '',
-        phone: updated?.phone || '',
+        phone: updated?.phone ?? '',
         avatar_url: updated?.avatar_url || ''
       });
 
@@ -79,7 +80,7 @@ export default function ProfilePage() {
         updateUser({
           ...user,
           full_name: updated.full_name,
-          phone: updated.phone,
+          phone: updated.phone ?? undefined,
           avatar_url: updated.avatar_url || undefined
         });
       }

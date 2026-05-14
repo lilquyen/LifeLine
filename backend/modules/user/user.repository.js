@@ -108,9 +108,9 @@ const updateProfile = async (userId, data) => {
                   last_seen_at, created_at
     `, [
         userId,
-        data.full_name || null,
-        data.phone || null,
-        data.avatar_url || null
+        data.full_name ?? null,
+        data.phone ?? null,
+        data.avatar_url ?? null
     ]);
 
     return result.rows[0];

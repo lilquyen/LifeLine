@@ -69,11 +69,17 @@ const updateLocation = async (userId, lat, lng) => {
 }
 
 const updateProfile = async (userId, data) => {
-    const allowedData = {
-        full_name: typeof data.full_name === 'string' ? data.full_name : undefined,
-        phone: typeof data.phone === 'string' ? data.phone : undefined,
-        avatar_url: typeof data.avatar_url === 'string' ? data.avatar_url : undefined
-    };
+    const allowedData = {};
+
+    if (typeof data.full_name === 'string') {
+        allowedData.full_name = data.full_name;
+    }
+    if (typeof data.phone === 'string') {
+        allowedData.phone = data.phone;
+    }
+    if (typeof data.avatar_url === 'string') {
+        allowedData.avatar_url = data.avatar_url;
+    }
 
     return repo.updateProfile(userId, allowedData);
 }
